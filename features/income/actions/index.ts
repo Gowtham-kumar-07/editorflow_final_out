@@ -65,7 +65,17 @@ export async function getIncomeSummaryAction(): Promise<IncomeSummary> {
   const { supabase, orgId, userId, role } = await resolveContext()
 
   const memberId = role === 'member' ? userId : undefined
-  return dbGetIncomeSummary(supabase, orgId, memberId)
+
+  // Fetch org payroll currency as fallback (used when there are no income records yet)
+  const { data: orgData } = await supabase
+    .from('organizations')
+    .select('default_payroll_currency, default_currency')
+    .eq('id', orgId)
+    .maybeSingle()
+
+  const orgPayrollCurrency = orgData?.default_payroll_currency ?? orgData?.default_currency ?? undefined
+
+  return dbGetIncomeSummary(supabase, orgId, memberId, orgPayrollCurrency)
 }
 
 export async function markIncomePaidAction(

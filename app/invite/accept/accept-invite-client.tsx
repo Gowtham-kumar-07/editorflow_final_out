@@ -1,26 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { switchOrganizationAction } from '@/features/orgs/actions'
 import { ROLE_LABELS, SPECIALIZATION_LABELS } from '@/features/team/types'
 import type { InvitationDetails, OrgRole, TeamSpecialization } from '@/features/team/types'
 
 type Props = {
-  token:      string
-  invitation: InvitationDetails
+  token:          string
+  invitation:     InvitationDetails
   /** null when the visitor is signed out */
-  userEmail:  string | null
+  userEmail:      string | null
+  /** The org they are currently active in (null for new users with no org) */
+  currentOrgName: string | null
 }
 
-export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
+type AcceptedState = { orgId: string; orgName: string }
+
+export function AcceptInviteClient({ token, invitation, userEmail, currentOrgName }: Props) {
   const [accepting, setAccepting]   = useState(false)
   const [signingOut, setSigningOut] = useState(false)
-  const router = useRouter()
+  const [switching, setSwitching]   = useState(false)
+  const [accepted, setAccepted]     = useState<AcceptedState | null>(null)
 
   const roleLabel = ROLE_LABELS[invitation.role as OrgRole] ?? invitation.role
   const specLabel = invitation.specialization
@@ -32,7 +38,6 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
     userEmail !== null &&
     userEmail.toLowerCase() === invitation.email.toLowerCase()
 
-  // Full invite URL including token — used in sign-in / sign-out / signup links
   const invitePath = `/invite/accept?token=${encodeURIComponent(token)}`
 
   // ── Accept invitation ──────────────────────────────────────────────────────
@@ -42,20 +47,32 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
     const { data, error } = await supabase.rpc('accept_invitation', { p_token: token })
 
     if (error) {
-      toast.error(error.message)
+      toast.error('Could not accept invitation. It may have expired.')
       setAccepting(false)
       return
     }
 
     const result = data as { org_id: string; org_name: string; role: string }
-    toast.success(`You've joined ${result.org_name}!`)
-    router.push('/dashboard')
-    router.refresh()
+    setAccepted({ orgId: result.org_id, orgName: result.org_name })
+    setAccepting(false)
   }
 
-  // ── Sign out current session and return to invitation ─────────────────────
-  // Uses window.location (hard redirect) instead of router.push so the session
-  // is fully cleared before the login page initialises.
+  // ── Switch to the newly joined org ────────────────────────────────────────
+  async function switchToNewOrg() {
+    if (!accepted) return
+    setSwitching(true)
+    const { error } = await switchOrganizationAction(accepted.orgId)
+    if (error) {
+      toast.error(error)
+      setSwitching(false)
+      return
+    }
+    // Hard navigate — we're outside the dashboard layout so there is no
+    // React Query client to clear; a full reload fetches fresh org context.
+    window.location.href = '/dashboard'
+  }
+
+  // ── Sign out and return to invitation ─────────────────────────────────────
   async function signOutAndContinue() {
     setSigningOut(true)
     const supabase = createClient()
@@ -63,11 +80,56 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
     window.location.href = `/login?next=${encodeURIComponent(invitePath)}`
   }
 
+  // ── STATE: Accepted ────────────────────────────────────────────────────────
+  if (accepted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center space-y-3">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+              <Check className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">Invitation accepted!</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                You&apos;ve joined <strong>{accepted.orgName}</strong>.
+              </p>
+            </div>
+          </div>
+
+          {/* Show current org only when the user already had one before accepting */}
+          {currentOrgName && currentOrgName !== accepted.orgName && (
+            <div className="rounded-lg border divide-y text-sm">
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-muted-foreground">Current organization</span>
+                <span className="font-medium">{currentOrgName}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3">
+                <span className="text-muted-foreground">New organization</span>
+                <span className="font-medium">{accepted.orgName}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Button className="w-full" onClick={switchToNewOrg} disabled={switching}>
+              {switching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Switch to {accepted.orgName}
+            </Button>
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/dashboard">Go to Dashboard</a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
 
-        {/* ── Header ────────────────────────────────────────────────────────── */}
+        {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-semibold">You&apos;ve been invited</h1>
           <p className="text-sm text-muted-foreground">
@@ -78,7 +140,7 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
           </p>
         </div>
 
-        {/* ── Invitation details card ────────────────────────────────────────── */}
+        {/* ── Invitation details card ──────────────────────────────────────── */}
         <div className="rounded-lg border p-4 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Organization</span>
@@ -100,7 +162,7 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
           </div>
         </div>
 
-        {/* ── STATE 1: Signed out ────────────────────────────────────────────── */}
+        {/* ── STATE 1: Signed out ──────────────────────────────────────────── */}
         {!userEmail && (
           <div className="space-y-3">
             <p className="text-sm text-center text-muted-foreground">
@@ -109,14 +171,10 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
             </p>
             <div className="flex flex-col gap-2">
               <Button asChild>
-                <a href={`/login?next=${encodeURIComponent(invitePath)}`}>
-                  Sign in
-                </a>
+                <a href={`/login?next=${encodeURIComponent(invitePath)}`}>Sign in</a>
               </Button>
               <Button variant="outline" asChild>
-                <a
-                  href={`/signup?invite=${encodeURIComponent(token)}&next=${encodeURIComponent(invitePath)}`}
-                >
+                <a href={`/signup?invite=${encodeURIComponent(token)}&next=${encodeURIComponent(invitePath)}`}>
                   Create account
                 </a>
               </Button>
@@ -124,7 +182,7 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
           </div>
         )}
 
-        {/* ── STATE 2: Wrong account signed in ──────────────────────────────── */}
+        {/* ── STATE 2: Wrong account ───────────────────────────────────────── */}
         {userEmail && !emailMatches && (
           <div className="space-y-3">
             <Alert variant="destructive">
@@ -135,10 +193,7 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
               </AlertDescription>
             </Alert>
             <div className="flex flex-col gap-2">
-              <Button
-                onClick={signOutAndContinue}
-                disabled={signingOut}
-              >
+              <Button onClick={signOutAndContinue} disabled={signingOut}>
                 {signingOut ? 'Signing out…' : 'Sign out and continue'}
               </Button>
               <Button variant="ghost" asChild>
@@ -148,7 +203,7 @@ export function AcceptInviteClient({ token, invitation, userEmail }: Props) {
           </div>
         )}
 
-        {/* ── STATE 3: Correct account signed in ────────────────────────────── */}
+        {/* ── STATE 3: Correct account ─────────────────────────────────────── */}
         {userEmail && emailMatches && (
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm rounded-lg bg-muted/50 px-3 py-2">

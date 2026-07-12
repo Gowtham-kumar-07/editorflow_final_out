@@ -15,18 +15,8 @@ import { SectionCard } from './section-card'
 import { updateFinancialDefaultsAction } from '../actions'
 import { financialDefaultsSchema, type FinancialDefaultsValues } from '../schema'
 import { settingsKeys } from '../queries/settings-queries'
+import { SUPPORTED_CURRENCIES } from '@/lib/currencies'
 import type { OrgSettings } from '../types'
-
-const CURRENCIES = [
-  { code: 'USD', label: 'USD — US Dollar'     },
-  { code: 'EUR', label: 'EUR — Euro'           },
-  { code: 'GBP', label: 'GBP — British Pound'  },
-  { code: 'INR', label: 'INR — Indian Rupee'   },
-  { code: 'AUD', label: 'AUD — Australian Dollar' },
-  { code: 'CAD', label: 'CAD — Canadian Dollar' },
-  { code: 'SGD', label: 'SGD — Singapore Dollar' },
-  { code: 'AED', label: 'AED — UAE Dirham'    },
-]
 
 interface FinancialDefaultsSectionProps {
   org: OrgSettings
@@ -86,7 +76,7 @@ export function FinancialDefaultsSection({ org }: FinancialDefaultsSectionProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {CURRENCIES.map((c) => (
+                    {SUPPORTED_CURRENCIES.map((c) => (
                       <SelectItem key={c.code} value={c.code}>
                         {c.label}
                       </SelectItem>
@@ -137,7 +127,7 @@ export function FinancialDefaultsSection({ org }: FinancialDefaultsSectionProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {CURRENCIES.map((c) => (
+                    {SUPPORTED_CURRENCIES.map((c) => (
                       <SelectItem key={c.code} value={c.code}>
                         {c.label}
                       </SelectItem>

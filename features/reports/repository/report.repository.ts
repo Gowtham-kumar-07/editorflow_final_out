@@ -55,10 +55,11 @@ function daysBetween(from: string, to: string): number {
 // ─── Overview report ──────────────────────────────────────────────────────────
 
 export async function dbGetOverviewReport(
-  supabase: Supabase,
-  orgId:    string,
-  from:     string,
-  to:       string,
+  supabase:    Supabase,
+  orgId:       string,
+  from:        string,
+  to:          string,
+  orgCurrency: string,
 ): Promise<OverviewReport> {
   const today = TODAY()
 
@@ -207,7 +208,7 @@ export async function dbGetOverviewReport(
       currency:    e.currency,
     }))
 
-  return { kpis, revenue_by_currency, project_status_dist, top_clients }
+  return { kpis, revenue_by_currency, project_status_dist, top_clients, org_currency: orgCurrency }
 }
 
 // ─── Revenue report ───────────────────────────────────────────────────────────
@@ -842,7 +843,7 @@ export async function dbGetPayrollReport(
 ): Promise<PayrollReport> {
   const { data: incomeRows } = await supabase
     .from('member_income')
-    .select('member_id, amount, currency, status')
+    .select('member_id, amount, currency, status, original_currency, converted_amount')
     .eq('organization_id', orgId)
 
   const rows = incomeRows ?? []
@@ -863,33 +864,49 @@ export async function dbGetPayrollReport(
     return [m.user_id, prof?.full_name ?? null] as [string, string | null]
   }))
 
-  // Group by member
-  const byMember = new Map<string, { pending: number[]; paid: number[]; currency: string }>()
+  // Group by member — amount/currency are already in the member's preferred currency
+  const byMember = new Map<string, {
+    pending: number[]; paid: number[]
+    currency: string
+    originalCurrencies: Set<string>
+  }>()
+
   for (const r of rows) {
     if (!byMember.has(r.member_id)) {
-      byMember.set(r.member_id, { pending: [], paid: [], currency: r.currency ?? 'USD' })
+      byMember.set(r.member_id, {
+        pending:            [],
+        paid:               [],
+        currency:           r.currency ?? 'USD',
+        originalCurrencies: new Set(),
+      })
     }
     const entry = byMember.get(r.member_id)!
-    if (r.status === 'pending') entry.pending.push(Number(r.amount))
-    else                        entry.paid.push(Number(r.amount))
+    if (r.status === 'pending') entry.pending.push(Number(r.converted_amount ?? r.amount))
+    else                        entry.paid.push(Number(r.converted_amount ?? r.amount))
+    if (r.original_currency) entry.originalCurrencies.add(r.original_currency)
   }
 
-  const currency = rows[0]?.currency ?? 'USD'
   const payrollRows: PayrollMemberRow[] = []
 
   for (const [memberId, data] of byMember.entries()) {
+    const origCurrencies = [...data.originalCurrencies].filter((c) => c !== data.currency)
     payrollRows.push({
-      member_id:      memberId,
-      member_name:    profileMap.get(memberId) ?? null,
-      pending_count:  data.pending.length,
-      pending_amount: data.pending.reduce((s, a) => s + a, 0),
-      paid_count:     data.paid.length,
-      paid_amount:    data.paid.reduce((s, a) => s + a, 0),
-      currency:       data.currency,
+      member_id:         memberId,
+      member_name:       profileMap.get(memberId) ?? null,
+      pending_count:     data.pending.length,
+      pending_amount:    data.pending.reduce((s, a) => s + a, 0),
+      paid_count:        data.paid.length,
+      paid_amount:       data.paid.reduce((s, a) => s + a, 0),
+      currency:          data.currency,
+      original_currency: origCurrencies.length === 1 ? origCurrencies[0] : (origCurrencies.length > 1 ? 'mixed' : null),
     })
   }
 
   payrollRows.sort((a, b) => b.pending_amount - a.pending_amount)
+
+  // Totals are only meaningful if all members share the same currency
+  const currencies = [...new Set(payrollRows.map((r) => r.currency))]
+  const singleCurrency = currencies.length === 1 ? currencies[0] : null
 
   const totals = payrollRows.reduce(
     (acc, r) => ({
@@ -901,5 +918,5 @@ export async function dbGetPayrollReport(
     { pending_count: 0, pending_amount: 0, paid_count: 0, paid_amount: 0 }
   )
 
-  return { rows: payrollRows, currency, totals }
+  return { rows: payrollRows, currency: singleCurrency, totals }
 }

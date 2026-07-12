@@ -37,6 +37,7 @@ export interface TaskWithDetails {
   deleted_at:       string | null
   completed_at:     string | null
   amount:           number
+  task_currency:    string
   project:          { id: string; name: string; project_files_url: string | null } | null
   assignee:         { id: string; full_name: string | null; avatar_url: string | null } | null
 }

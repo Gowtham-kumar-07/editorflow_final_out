@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Receipt, Ban } from 'lucide-react'
-import { formatDate } from '@/utils/format'
+import { formatDate, formatCurrency } from '@/utils/format'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PaymentStatusBadge } from './payment-status-badge'
@@ -12,12 +12,6 @@ import type { PaymentListItem } from '../types'
 import type { OrgRole } from '@/types/supabase'
 import { canVoidPayment } from '@/lib/permissions'
 
-function fmtMoney(amount: number) {
-  return new Intl.NumberFormat('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
 
 interface PaymentMobileCardProps {
   payment: PaymentListItem
@@ -43,7 +37,7 @@ export function PaymentMobileCard({ payment: p, role }: PaymentMobileCardProps) 
           </div>
           <div className="text-right shrink-0">
             <p className="font-mono font-semibold text-sm">
-              {p.invoice_currency} {fmtMoney(p.amount)}
+              {formatCurrency(p.amount, p.invoice_currency)}
             </p>
             <p className="text-xs text-muted-foreground">
               {formatDate(p.payment_date)}

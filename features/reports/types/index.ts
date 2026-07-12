@@ -39,6 +39,7 @@ export interface OverviewReport {
   revenue_by_currency: RevenueByCurrencyRow[]
   project_status_dist: ProjectStatusCount[]
   top_clients:         TopClientRow[]
+  org_currency:        string
 }
 
 // ─── Revenue ─────────────────────────────────────────────────────────────────
@@ -232,18 +233,20 @@ export interface BottlenecksReport {
 // ─── Payroll ─────────────────────────────────────────────────────────────────
 
 export interface PayrollMemberRow {
-  member_id:      string
-  member_name:    string | null
-  pending_count:  number
-  pending_amount: number
-  paid_count:     number
-  paid_amount:    number
-  currency:       string
+  member_id:         string
+  member_name:       string | null
+  pending_count:     number
+  pending_amount:    number
+  paid_count:        number
+  paid_amount:       number
+  currency:          string   // member's preferred currency (amounts are in this currency)
+  original_currency: string | null  // task currency (null if all same as member currency)
 }
 
 export interface PayrollReport {
   rows:     PayrollMemberRow[]
-  currency: string
+  // null when members have mixed currencies; summing across currencies is invalid
+  currency: string | null
   totals: {
     pending_count:  number
     pending_amount: number

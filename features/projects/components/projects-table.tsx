@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MoreHorizontal, Plus, Eye, Edit, Archive, RotateCcw } from 'lucide-react'
+import { MoreHorizontal, Eye, Edit, Archive, RotateCcw, FolderKanban } from 'lucide-react'
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/shared/empty-state'
 import {
   Table,
   TableBody,
@@ -94,35 +95,26 @@ function TablePagination({
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyState({ hasFilters, userRole }: { hasFilters: boolean; userRole: OrgRole | null }) {
+function ProjectsEmptyState({ hasFilters, userRole }: { hasFilters: boolean; userRole: OrgRole | null }) {
   const canCreate = userRole === 'owner' || userRole === 'admin' || userRole === 'project_manager'
 
   if (hasFilters) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-        <p className="text-sm font-medium">No projects found</p>
-        <p className="mt-1 text-xs text-muted-foreground">Try adjusting your search or filters</p>
-        <Button variant="outline" size="sm" className="mt-4" asChild>
-          <Link href="/projects">Clear filters</Link>
-        </Button>
-      </div>
+      <EmptyState
+        icon={FolderKanban}
+        title="No projects found"
+        description="Try adjusting your search or filters."
+        action={{ label: 'Clear filters', href: '/projects' }}
+      />
     )
   }
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-      <p className="text-sm font-medium">No projects yet</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        {canCreate ? 'Create your first project to get started' : 'Projects will appear here when created.'}
-      </p>
-      {canCreate && (
-        <Button size="sm" className="mt-4" asChild>
-          <Link href="/projects/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Project
-          </Link>
-        </Button>
-      )}
-    </div>
+    <EmptyState
+      icon={FolderKanban}
+      title="No projects yet"
+      description={canCreate ? 'Create your first project to get started.' : 'Projects will appear here when created.'}
+      action={canCreate ? { label: 'New Project', href: '/projects/new' } : undefined}
+    />
   )
 }
 
@@ -151,7 +143,7 @@ export function ProjectsTable({
   if (projects.length === 0) {
     return (
       <div className="rounded-lg border">
-        <EmptyState hasFilters={hasFilters} userRole={userRole} />
+        <ProjectsEmptyState hasFilters={hasFilters} userRole={userRole} />
       </div>
     )
   }

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { AlertCircle, RefreshCcw, LayoutDashboard } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { logger } from '@/lib/logger'
 
 export default function DashboardError({
   error,
@@ -13,7 +14,7 @@ export default function DashboardError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[dashboard error boundary]', error.digest ?? error.message)
+    logger.error('dashboard error boundary triggered', { digest: error.digest ?? 'no-digest' })
   }, [error])
 
   return (

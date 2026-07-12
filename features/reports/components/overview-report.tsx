@@ -44,9 +44,9 @@ interface OverviewReportProps {
 export function OverviewReportView({ dateRange }: OverviewReportProps) {
   const { data, isLoading } = useOverviewReport(dateRange.from, dateRange.to)
 
-  const kpis      = data?.kpis
-  const byCur     = data?.revenue_by_currency ?? []
-  const topCur    = byCur[0]
+  const kpis       = data?.kpis
+  const orgCur     = data?.org_currency
+  const byCur      = data?.revenue_by_currency ?? []
   const statusDist = data?.project_status_dist ?? []
   const topClients = data?.top_clients ?? []
 
@@ -61,17 +61,16 @@ export function OverviewReportView({ dateRange }: OverviewReportProps) {
           value={kpis?.revenue_in_period}
           icon={DollarSign}
           isCurrency
-          currency={topCur?.currency}
+          currency={orgCur}
           colorClass="text-emerald-500"
           loading={isLoading}
-          note={topCur ? `${topCur.currency} — ${topCur.count} payment${topCur.count !== 1 ? 's' : ''}` : undefined}
         />
         <ReportKpiCard
           title="Outstanding Balance"
           value={kpis?.outstanding_balance}
           icon={Clock}
           isCurrency
-          currency={topCur?.currency}
+          currency={orgCur}
           loading={isLoading}
         />
         <ReportKpiCard
@@ -79,7 +78,7 @@ export function OverviewReportView({ dateRange }: OverviewReportProps) {
           value={kpis?.overdue_amount}
           icon={AlertTriangle}
           isCurrency
-          currency={topCur?.currency}
+          currency={orgCur}
           colorClass={kpis?.overdue_amount ? 'text-red-500' : 'text-foreground'}
           loading={isLoading}
         />

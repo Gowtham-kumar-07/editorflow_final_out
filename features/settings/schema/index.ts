@@ -1,7 +1,8 @@
 import { z } from 'zod'
 
 export const profileSchema = z.object({
-  full_name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
+  full_name:          z.string().min(1, 'Name is required').max(100, 'Name is too long'),
+  preferred_currency: z.string().min(3).max(3),
 })
 
 export const orgProfileSchema = z.object({

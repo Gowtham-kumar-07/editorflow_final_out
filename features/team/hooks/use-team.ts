@@ -45,7 +45,7 @@ export function useUpdateMemberRole() {
       updateMemberRoleAction(userId, role),
     onSuccess: (result) => {
       if (result.ok) {
-        toast.success('Role updated.')
+        toast.success('Role updated')
         void queryClient.invalidateQueries({ queryKey: teamKeys.members() })
       } else {
         toast.error(result.error)
@@ -61,7 +61,7 @@ export function useUpdateMemberSpecialization() {
       updateMemberSpecializationAction(userId, specialization),
     onSuccess: (result) => {
       if (result.ok) {
-        toast.success('Specialization updated.')
+        toast.success('Specialization updated')
         void queryClient.invalidateQueries({ queryKey: teamKeys.members() })
       } else {
         toast.error(result.error)
@@ -76,7 +76,7 @@ export function useDeactivateMember() {
     mutationFn: (userId: string) => deactivateMemberAction(userId),
     onSuccess: (result) => {
       if (result.ok) {
-        toast.success('Member deactivated.')
+        toast.success('Member deactivated')
         void queryClient.invalidateQueries({ queryKey: teamKeys.members() })
       } else {
         toast.error(result.error)
@@ -91,7 +91,7 @@ export function useReactivateMember() {
     mutationFn: (userId: string) => reactivateMemberAction(userId),
     onSuccess: (result) => {
       if (result.ok) {
-        toast.success('Member reactivated.')
+        toast.success('Member reactivated')
         void queryClient.invalidateQueries({ queryKey: teamKeys.members() })
       } else {
         toast.error(result.error)
@@ -106,7 +106,7 @@ export function useCancelInvitation() {
     mutationFn: (invitationId: string) => cancelInvitationAction(invitationId),
     onSuccess: (result) => {
       if (result.ok) {
-        toast.success('Invitation cancelled.')
+        toast.success('Invitation cancelled')
         void queryClient.invalidateQueries({ queryKey: teamKeys.members() })
       } else {
         toast.error(result.error)

@@ -8,6 +8,17 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { formatDate } from '@/utils/format'
 import type { UpcomingDeadlineItem } from '../types'
 
+function relativeDue(dateStr: string): string {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const due = new Date(dateStr)
+  due.setHours(0, 0, 0, 0)
+  const diff = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diff === 0) return 'Due today'
+  if (diff === 1) return 'Tomorrow'
+  return `in ${diff} day${diff === 1 ? '' : 's'}`
+}
+
 const STATUS_LABEL: Record<string, string> = {
   todo:        'To Do',
   in_progress: 'In Progress',
@@ -62,7 +73,7 @@ export function UpcomingDeadlinesWidget({ items, loading = false }: UpcomingDead
                     {item.is_overdue ? 'Overdue' : formatDate(item.due_date)}
                   </p>
                   {!item.is_overdue && (
-                    <p className="text-xs text-muted-foreground">{formatDate(item.due_date)}</p>
+                    <p className="text-xs text-muted-foreground">{relativeDue(item.due_date)}</p>
                   )}
                   <Badge variant="outline" className="mt-1 text-[10px]">
                     {STATUS_LABEL[item.status] ?? item.status}

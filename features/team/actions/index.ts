@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import type { GetTeamResult } from '../types'
 import type { InviteFormValues } from '../schema'
+import { logger } from '@/lib/logger'
 import {
   fetchTeam,
   updateMemberRoleService,
@@ -65,15 +66,19 @@ export async function getTeam(): Promise<GetTeamResult> {
 export async function getMyRoleAction(): Promise<ActionResult<{ role: OrgRole; userId: string }>> {
   const { orgId, userId, supabase } = await resolveContext()
   const { data, error } = await supabase.rpc('get_my_role_in_org', { org_id: orgId })
-  if (error) return { ok: false, error: error.message }
+  if (error) {
+    logger.error('getMyRoleAction failed', { code: error.code })
+    return { ok: false, error: 'Could not retrieve your role. Please try again.' }
+  }
   if (!data) return { ok: false, error: 'No role found' }
   return { ok: true, data: { role: data as OrgRole, userId } }
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
-function toActionError(err: unknown): ActionResult<never> {
-  return { ok: false, error: err instanceof Error ? err.message : String(err) }
+function toActionError(err: unknown, action?: string): ActionResult<never> {
+  logger.error('team action failed', { action: action ?? 'unknown', code: err instanceof Error ? err.message.slice(0, 40) : String(err).slice(0, 40) })
+  return { ok: false, error: 'An unexpected error occurred. Please try again.' }
 }
 
 export async function inviteMemberAction(
@@ -85,7 +90,7 @@ export async function inviteMemberAction(
     const result = await createInvitationService(supabase, orgId, values)
     return { ok: true, data: result }
   } catch (err) {
-    return toActionError(err)
+    return toActionError(err, 'inviteMember')
   }
 }
 
@@ -99,7 +104,7 @@ export async function updateMemberRoleAction(
     await updateMemberRoleService(supabase, orgId, targetUserId, newRole)
     return { ok: true, data: undefined }
   } catch (err) {
-    return toActionError(err)
+    return toActionError(err, 'updateMemberRole')
   }
 }
 
@@ -113,7 +118,7 @@ export async function updateMemberSpecializationAction(
     await updateMemberSpecializationService(supabase, orgId, targetUserId, specialization)
     return { ok: true, data: undefined }
   } catch (err) {
-    return toActionError(err)
+    return toActionError(err, 'updateMemberSpecialization')
   }
 }
 
@@ -126,7 +131,7 @@ export async function deactivateMemberAction(
     await deactivateMemberService(supabase, orgId, targetUserId)
     return { ok: true, data: undefined }
   } catch (err) {
-    return toActionError(err)
+    return toActionError(err, 'deactivateMember')
   }
 }
 
@@ -139,7 +144,7 @@ export async function reactivateMemberAction(
     await reactivateMemberService(supabase, orgId, targetUserId)
     return { ok: true, data: undefined }
   } catch (err) {
-    return toActionError(err)
+    return toActionError(err, 'reactivateMember')
   }
 }
 
@@ -152,6 +157,6 @@ export async function cancelInvitationAction(
     await cancelInvitationService(supabase, invitationId)
     return { ok: true, data: undefined }
   } catch (err) {
-    return toActionError(err)
+    return toActionError(err, 'cancelInvitation')
   }
 }

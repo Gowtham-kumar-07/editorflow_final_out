@@ -7,6 +7,8 @@ import { createClient } from '@/supabase/server'
 import { dbGetPaymentById } from '@/features/payments/repository/payment.repository'
 import { PAYMENT_METHOD_LABELS } from '@/features/payments/types'
 import type { PaymentMethod } from '@/features/payments/types'
+import { canViewPayments } from '@/lib/permissions'
+import type { OrgRole } from '@/types/supabase'
 
 const el = React.createElement
 
@@ -231,6 +233,26 @@ export async function GET(
 ) {
   const { id } = await params
   const supabase = await createClient()
+
+  // Auth check — reject unauthenticated requests immediately
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Role check — only owner / admin / project_manager may download receipts
+  const { data: mem } = await supabase
+    .from('organization_memberships')
+    .select('role')
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .limit(1)
+    .maybeSingle()
+
+  const role = (mem?.role as OrgRole | null) ?? 'member'
+  if (!canViewPayments(role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const payment = await dbGetPaymentById(supabase, id)
   if (!payment) {

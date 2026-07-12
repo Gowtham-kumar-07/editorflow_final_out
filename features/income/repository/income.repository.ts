@@ -71,9 +71,10 @@ export async function dbGetIncome(
 }
 
 export async function dbGetIncomeSummary(
-  supabase: TypedClient,
-  orgId:    string,
-  memberId?: string
+  supabase:           TypedClient,
+  orgId:              string,
+  memberId?:          string,
+  orgPayrollCurrency?: string,
 ): Promise<IncomeSummary> {
   let query = supabase
     .from('member_income')
@@ -88,7 +89,9 @@ export async function dbGetIncomeSummary(
   const pending = rows.filter((r) => r.status === 'pending')
   const paid    = rows.filter((r) => r.status === 'paid')
 
-  const currency = rows[0]?.currency ?? 'USD'
+  // For member-scoped queries all rows share the same currency (member's preferred).
+  // For org-wide queries use the org's payroll currency as the canonical fallback.
+  const currency = rows[0]?.currency ?? orgPayrollCurrency ?? 'USD'
 
   return {
     pending_count:  pending.length,

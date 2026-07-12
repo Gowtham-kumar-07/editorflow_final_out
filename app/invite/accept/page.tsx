@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import type { Database } from '@/types/supabase'
 import { AcceptInviteClient } from './accept-invite-client'
+import { getUserOrganization } from '@/services/organization.service'
 import type { InvitationDetails } from '@/features/team/types'
 
 export const metadata: Metadata = { title: 'Accept invitation' }
@@ -76,17 +77,21 @@ export default async function AcceptInvitePage({ searchParams }: Props) {
     invited_by_name: inviterProfile?.full_name ?? null,
   }
 
-  // ── Resolve current auth state ────────────────────────────────────────────
+  // ── Resolve current auth state + active org ──────────────────────────────
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Fetch the user's current active org so the success page can display it
+  const currentOrg = user ? await getUserOrganization(supabase, user.id) : null
 
   return (
     <AcceptInviteClient
       token={token}
       invitation={invitation}
       userEmail={user?.email ?? null}
+      currentOrgName={currentOrg?.name ?? null}
     />
   )
 }

@@ -16,8 +16,6 @@ type SidebarProps = {
   onNavigate?: () => void
 }
 
-// Defined at module level so the React Compiler never conflates instances
-// across map iterations — avoids memoization issues when passed to .map().
 function NavLink({
   item,
   isActive,
@@ -36,14 +34,23 @@ function NavLink({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-        'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-        isActive && 'bg-sidebar-accent text-sidebar-accent-foreground',
+        'relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium',
+        'transition-all duration-150 ease-out',
+        'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        isActive && 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold',
         collapsed && 'justify-center px-2',
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" />
-      {!collapsed && <span>{item.title}</span>}
+      {/* Active left indicator */}
+      {isActive && !collapsed && (
+        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-primary" />
+      )}
+      <Icon className={cn('h-4 w-4 shrink-0 transition-transform duration-150', isActive && 'scale-110')} />
+      {!collapsed && (
+        <span className={cn('transition-opacity duration-150', collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100')}>
+          {item.title}
+        </span>
+      )}
     </Link>
   )
 
@@ -51,7 +58,7 @@ function NavLink({
     return (
       <Tooltip>
         <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
-        <TooltipContent side="right">{item.title}</TooltipContent>
+        <TooltipContent side="right" className="font-medium">{item.title}</TooltipContent>
       </Tooltip>
     )
   }
@@ -60,7 +67,7 @@ function NavLink({
 }
 
 export function Sidebar({ collapsed = false, onNavigate }: SidebarProps) {
-  const pathname     = usePathname()
+  const pathname = usePathname()
   const { organization } = useOrganizationContext()
   const role = organization?.role ?? 'member'
 
@@ -72,7 +79,8 @@ export function Sidebar({ collapsed = false, onNavigate }: SidebarProps) {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          'flex h-full flex-col border-r bg-sidebar transition-all duration-300',
+          'flex h-full flex-col border-r bg-sidebar',
+          'transition-[width] duration-300 ease-in-out',
           collapsed ? 'w-16' : 'w-64',
         )}
       >
@@ -80,20 +88,26 @@ export function Sidebar({ collapsed = false, onNavigate }: SidebarProps) {
         <div
           className={cn(
             'flex h-16 shrink-0 items-center border-b px-4',
-            collapsed && 'justify-center',
+            collapsed && 'justify-center px-2',
           )}
         >
-          <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-2">
-            <Zap className="h-6 w-6 shrink-0 text-primary" />
-            {!collapsed && (
-              <span className="text-lg font-bold text-sidebar-foreground">{APP_NAME}</span>
-            )}
+          <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-2 min-w-0">
+            <Zap className="h-5 w-5 shrink-0 text-primary" />
+            <span
+              className={cn(
+                'text-base font-bold text-sidebar-foreground truncate',
+                'transition-all duration-200 ease-in-out',
+                collapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100',
+              )}
+            >
+              {APP_NAME}
+            </span>
           </Link>
         </div>
 
         {/* Main nav */}
-        <ScrollArea className="flex-1 py-4">
-          <nav className="flex flex-col gap-1 px-2">
+        <ScrollArea className="flex-1 py-3">
+          <nav className="flex flex-col gap-0.5 px-2">
             {visibleNavItems.map((item) => (
               <NavLink
                 key={item.href}
@@ -107,9 +121,9 @@ export function Sidebar({ collapsed = false, onNavigate }: SidebarProps) {
         </ScrollArea>
 
         {/* Bottom nav */}
-        <div className="py-4">
-          <Separator className="mb-4" />
-          <nav className="flex flex-col gap-1 px-2">
+        <div className="py-3">
+          <Separator className="mb-3" />
+          <nav className="flex flex-col gap-0.5 px-2">
             {bottomNavItems.map((item) => (
               <NavLink
                 key={item.href}

@@ -88,7 +88,7 @@ export function ClientInvoicesCard({ clientId }: { clientId: string }) {
                 <div className="ml-3 flex shrink-0 items-center gap-2">
                   <InvoiceStatusBadge status={invoice.status} />
                   <span className="text-sm font-medium tabular-nums">
-                    {formatCurrency(invoice.total)}
+                    {formatCurrency(invoice.total, invoice.currency)}
                   </span>
                 </div>
               </a>

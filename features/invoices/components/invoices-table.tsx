@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { FileText } from 'lucide-react'
 import { InvoiceStatusBadge } from './invoice-status-badge'
+import { EmptyState } from '@/components/shared/empty-state'
 import { formatCurrency, formatDate } from '@/utils/format'
 import type { InvoiceListItem } from '../types'
 
@@ -13,13 +14,11 @@ interface Props {
 export function InvoicesTable({ invoices }: Props) {
   if (invoices.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-        <FileText className="h-10 w-10 text-muted-foreground/30" />
-        <p className="text-sm font-medium text-muted-foreground">No invoices found</p>
-        <p className="text-xs text-muted-foreground">
-          Adjust your filters or create a new invoice.
-        </p>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="No invoices found"
+        description="Adjust your filters or create a new invoice."
+      />
     )
   }
 

@@ -12,18 +12,50 @@ const UNIQUE_VIOLATION = '23505'
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 /**
- * Returns the first organization the user belongs to, enriched with their
- * membership role. Returns null when the user has no membership or when the
- * tables do not yet exist (safe for use before migrations run).
+ * Returns the user's active organization (respects profiles.active_organization_id),
+ * enriched with their membership role.
+ * Falls back to the first active membership when active_organization_id is unset
+ * or no longer valid (e.g. membership was revoked after the last switch).
  */
 export async function getUserOrganization(
   supabase: TypedClient,
   userId: string
 ): Promise<OrganizationWithRole | null> {
+  // Prefer the user's explicitly-set active org
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('active_organization_id')
+    .eq('id', userId)
+    .maybeSingle()
+
+  const activeOrgId = profile?.active_organization_id ?? null
+
+  if (activeOrgId) {
+    const { data: activeMembership } = await supabase
+      .from('organization_memberships')
+      .select('organization_id, role')
+      .eq('user_id', userId)
+      .eq('organization_id', activeOrgId)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (activeMembership) {
+      const { data: activeOrg } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', activeMembership.organization_id)
+        .single()
+
+      if (activeOrg) return { ...activeOrg, role: activeMembership.role }
+    }
+  }
+
+  // Fallback: first active membership (new users / missing active_organization_id)
   const { data: membership, error: membershipError } = await supabase
     .from('organization_memberships')
     .select('organization_id, role')
     .eq('user_id', userId)
+    .is('deleted_at', null)
     .limit(1)
     .maybeSingle()
 
@@ -38,6 +70,40 @@ export async function getUserOrganization(
   if (orgError || !org) return null
 
   return { ...org, role: membership.role }
+}
+
+/**
+ * Returns every organization the user has an active membership in,
+ * each enriched with their role. Used to populate the org switcher.
+ */
+export async function getAllUserOrganizations(
+  supabase: TypedClient,
+  userId: string,
+): Promise<OrganizationWithRole[]> {
+  const { data: memberships } = await supabase
+    .from('organization_memberships')
+    .select('organization_id, role')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+
+  if (!memberships?.length) return []
+
+  const orgIds = memberships.map((m) => m.organization_id)
+
+  const { data: orgs } = await supabase
+    .from('organizations')
+    .select('*')
+    .in('id', orgIds)
+    .is('deleted_at', null)
+
+  if (!orgs) return []
+
+  const roleByOrgId = new Map(memberships.map((m) => [m.organization_id, m.role]))
+
+  return orgs.map((org) => ({
+    ...org,
+    role: roleByOrgId.get(org.id) ?? 'member',
+  }))
 }
 
 /**

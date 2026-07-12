@@ -2,12 +2,22 @@
 // Uses open.er-api.com (free tier, no API key required).
 // Rates are cached in-process for 5 minutes to avoid hammering the provider.
 
-export type FxSource = 'live' | 'fallback_1'
+export type FxSource = 'live' | 'fallback_1' | 'same_currency'
 
 export interface FxResult {
   rate:   number
   source: FxSource
   date:   string   // YYYY-MM-DD of the rate
+}
+
+export interface PayrollFxSnapshot {
+  original_amount:   number
+  original_currency: string
+  member_currency:   string
+  converted_amount:  number
+  fx_rate:           number
+  fx_rate_source:    FxSource
+  fx_snapshot_date:  string
 }
 
 // ─── In-process cache ─────────────────────────────────────────────────────────
@@ -28,7 +38,7 @@ export async function getFxRate(from: string, to: string): Promise<FxResult> {
   const t   = to.toUpperCase()
   const now = todayStr()
 
-  if (f === t) return { rate: 1, source: 'live', date: now }
+  if (f === t) return { rate: 1, source: 'same_currency', date: now }
 
   const key    = `${f}/${t}`
   const cached = CACHE.get(key)
@@ -55,9 +65,30 @@ export async function getFxRate(from: string, to: string): Promise<FxResult> {
     CACHE.set(key, { rate, ts: Date.now() })
     return { rate, source: 'live', date: now }
   } catch (err) {
-    // Log server-side only — never surfaces to browser
-    console.error('[fx] rate lookup failed', { from: f, to: t, err: String(err) })
-    // Fallback: 1:1 with explicit source tag so the audit trail is honest
-    return { rate: 1, source: 'fallback_1', date: now }
+    throw new Error(`FX rate unavailable for ${f}/${t}: ${String(err)}`)
+  }
+}
+
+// ─── Payroll FX helper ────────────────────────────────────────────────────────
+
+export async function capturePayrollFxSnapshot(
+  originalAmount:   number,
+  originalCurrency: string,
+  memberCurrency:   string
+): Promise<PayrollFxSnapshot> {
+  const from = originalCurrency.toUpperCase()
+  const to   = memberCurrency.toUpperCase()
+  const fx   = await getFxRate(from, to)
+
+  const converted = parseFloat((originalAmount * fx.rate).toFixed(2))
+
+  return {
+    original_amount:   originalAmount,
+    original_currency: from,
+    member_currency:   to,
+    converted_amount:  converted,
+    fx_rate:           fx.rate,
+    fx_rate_source:    fx.source,
+    fx_snapshot_date:  fx.date,
   }
 }

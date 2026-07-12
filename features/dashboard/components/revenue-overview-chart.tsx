@@ -7,11 +7,12 @@ import { formatCurrency } from '@/utils/format'
 import type { RevenueTrendMonth } from '../types'
 
 interface RevenueOverviewChartProps {
-  data:     RevenueTrendMonth[]
-  loading?: boolean
+  data:      RevenueTrendMonth[]
+  loading?:  boolean
+  currency?: string
 }
 
-export function RevenueOverviewChart({ data, loading = false }: RevenueOverviewChartProps) {
+export function RevenueOverviewChart({ data, loading = false, currency = 'USD' }: RevenueOverviewChartProps) {
   const [tooltip, setTooltip] = useState<{ idx: number; x: number; y: number } | null>(null)
 
   if (loading) {
@@ -117,7 +118,7 @@ export function RevenueOverviewChart({ data, loading = false }: RevenueOverviewC
                 </text>
                 <text x={tx + tW / 2} y={ty + 28} textAnchor="middle"
                   className="fill-primary" style={{ fontSize: 11, fontFamily: 'inherit', fontWeight: 700 }}>
-                  {formatCurrency(d.amount)}
+                  {formatCurrency(d.amount, currency)}
                 </text>
               </g>
             )

@@ -11,6 +11,7 @@ import {
   archiveTaskAction,
   transitionTaskStatusAction,
   addTaskCommentAction,
+  getTaskIncomeAction,
 } from '../actions'
 import type { TaskFilters, TaskWithDetails, TaskStatus } from '../types'
 
@@ -83,6 +84,15 @@ export function useTransitionTaskStatus(taskId: string, projectId: string) {
       queryClient.invalidateQueries({ queryKey: projectKeys.stats(projectId) })
       queryClient.invalidateQueries({ queryKey: taskKeys.activity(taskId) })
     },
+  })
+}
+
+export function useTaskIncome(taskId: string, enabled: boolean) {
+  return useQuery({
+    queryKey:  ['task-income', taskId],
+    queryFn:   () => getTaskIncomeAction(taskId),
+    enabled:   enabled && !!taskId,
+    staleTime: 5 * 60 * 1000,
   })
 }
 

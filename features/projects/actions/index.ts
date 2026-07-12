@@ -8,6 +8,7 @@ import type { ProjectWithClient } from '@/types/project'
 import type { ProjectFilters, GetProjectsResult } from '../types'
 import type { ProjectFormValues } from '../schema'
 import type { OrgRole, ProjectStatus } from '@/types/supabase'
+import { logger } from '@/lib/logger'
 import {
   fetchProjects,
   fetchProjectById,
@@ -167,8 +168,8 @@ export async function updateProjectStatusAction(
     await updateProjectStatusService(supabase, projectId, orgId, newStatus)
     return { ok: true, data: undefined }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return { ok: false, error: msg }
+    logger.error('updateProjectStatus failed', { detail: err instanceof Error ? err.message.slice(0, 40) : 'unknown' })
+    return { ok: false, error: 'Could not update project status. Please try again.' }
   }
 }
 

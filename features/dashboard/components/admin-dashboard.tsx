@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import {
   FolderKanban,
   ClipboardCheck,
@@ -17,18 +18,31 @@ import { FinancialAttention } from './financial-attention'
 import { RecentPaymentsWidget } from './recent-payments-widget'
 import { ReviewQueueWidget } from './review-queue-widget'
 import { RecentActivityWidget } from './recent-activity-widget'
+import { WelcomeBanner } from './welcome-banner'
+import { OnboardingPrompt } from './onboarding-prompt'
 import type { AdminDashboardData } from '../types'
 
 interface AdminDashboardProps {
   data:     AdminDashboardData
+  orgName:  string
   loading?: boolean
 }
 
-export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
+export function AdminDashboard({ data, orgName, loading = false }: AdminDashboardProps) {
   const { kpis, revenue_trend, project_status_dist, financial_attention, recent_payments, review_queue, recent_activity } = data
+
+  const isEmpty = !loading && kpis.active_projects === 0 && kpis.active_members <= 1 && kpis.revenue_this_month === 0
+
+  // Show the onboarding prompt only when the welcome banner is not visible —
+  // both showing at once creates redundant, cluttered guidance for new orgs.
+  const [bannerVisible, setBannerVisible] = useState(false)
+  useEffect(() => {
+    try { setBannerVisible(localStorage.getItem('editorflow_show_welcome') === '1') } catch {}
+  }, [])
 
   return (
     <div className="space-y-6">
+      <WelcomeBanner orgName={orgName} />
       {/* KPI Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <DashboardKpiCard
@@ -37,6 +51,7 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
           icon={FolderKanban}
           href="/projects"
           loading={loading}
+          index={0}
         />
         <DashboardKpiCard
           title="Tasks in Review"
@@ -45,6 +60,7 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
           href="/tasks?status=review"
           colorClass="text-violet-500"
           loading={loading}
+          index={1}
         />
         <DashboardKpiCard
           title="Revenue This Month"
@@ -55,6 +71,7 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
           currency={kpis.revenue_currency}
           colorClass="text-emerald-500"
           loading={loading}
+          index={2}
         />
         <DashboardKpiCard
           title="Outstanding Balance"
@@ -65,6 +82,7 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
           currency={kpis.revenue_currency}
           colorClass="text-amber-500"
           loading={loading}
+          index={3}
         />
         <DashboardKpiCard
           title="Overdue Invoices"
@@ -73,6 +91,7 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
           href="/invoices"
           colorClass={kpis.overdue_invoices > 0 ? 'text-red-500' : 'text-muted-foreground'}
           loading={loading}
+          index={4}
         />
         <DashboardKpiCard
           title="Active Members"
@@ -80,6 +99,7 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
           icon={Users}
           href="/team"
           loading={loading}
+          index={5}
         />
       </div>
 
@@ -95,6 +115,7 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
             currency={kpis.payroll_currency}
             colorClass="text-amber-500"
             loading={loading}
+            index={0}
           />
           <DashboardKpiCard
             title="Paid This Month"
@@ -105,14 +126,18 @@ export function AdminDashboard({ data, loading = false }: AdminDashboardProps) {
             currency={kpis.payroll_currency}
             colorClass="text-emerald-500"
             loading={loading}
+            index={1}
           />
         </div>
       )}
 
+      {/* Onboarding prompt for brand-new orgs — hidden while the welcome banner is up */}
+      {isEmpty && !bannerVisible && <OnboardingPrompt />}
+
       {/* Revenue chart + Project status */}
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <RevenueOverviewChart data={revenue_trend} loading={loading} />
+          <RevenueOverviewChart data={revenue_trend} loading={loading} currency={kpis.revenue_currency} />
         </div>
         <div className="lg:col-span-2">
           <ProjectStatusOverview data={project_status_dist} loading={loading} />

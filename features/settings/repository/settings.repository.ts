@@ -25,7 +25,7 @@ export async function dbGetProfileSettings(
 ): Promise<ProfileSettings | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, avatar_url')
+    .select('id, full_name, email, avatar_url, preferred_currency')
     .eq('id', userId)
     .single()
 
@@ -51,10 +51,11 @@ export async function dbUpdateOrgSettings(
 
 export async function dbUpdateProfile(
   supabase: Client,
-  values: { full_name: string }
+  values: { full_name: string; preferred_currency?: string }
 ): Promise<ProfileSettings> {
   const { data, error } = await supabase.rpc('update_my_profile', {
-    p_full_name: values.full_name,
+    p_full_name:          values.full_name,
+    p_preferred_currency: values.preferred_currency ?? undefined,
   })
 
   if (error) {

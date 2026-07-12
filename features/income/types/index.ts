@@ -16,6 +16,14 @@ export interface IncomeRecord {
   notes:                 string | null
   created_at:            string
   updated_at:            string
+  // FX snapshot fields (null for legacy records backfilled as same_currency)
+  original_amount:   number | null
+  original_currency: string | null
+  member_currency:   string | null
+  fx_rate:           number | null
+  fx_rate_source:    string | null
+  fx_snapshot_date:  string | null
+  converted_amount:  number | null
 }
 
 export interface IncomeListItem extends IncomeRecord {

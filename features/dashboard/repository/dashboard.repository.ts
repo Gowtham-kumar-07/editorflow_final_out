@@ -224,7 +224,7 @@ export async function dbGetAdminDashboard(
   ] = await Promise.all([
     supabase
       .from('organizations')
-      .select('default_currency')
+      .select('default_currency, default_payroll_currency')
       .eq('id', orgId)
       .maybeSingle(),
 
@@ -375,20 +375,23 @@ export async function dbGetAdminDashboard(
     }
   })
 
-  // Payroll KPIs
+  // Payroll KPIs — always display in org's base currency
   const monthStartForPayroll = monthStartStr()
   const { data: payrollRows } = await supabase
     .from('member_income')
-    .select('amount, currency, status, completed_at')
+    .select('amount, currency, member_currency, converted_amount, status, completed_at')
     .eq('organization_id', orgId)
 
-  const allPayroll = payrollRows ?? []
-  const payrollCurrency = allPayroll[0]?.currency ?? 'USD'
+  const allPayroll      = payrollRows ?? []
+  // Use org's default_currency (not default_payroll_currency whose DB default is 'USD')
+  const payrollCurrency = baseCurrency
 
-  const pending_payroll         = allPayroll.filter((r) => r.status === 'pending').reduce((s, r) => s + Number(r.amount), 0)
+  const pending_payroll         = allPayroll
+    .filter((r) => r.status === 'pending')
+    .reduce((s, r) => s + Number(r.converted_amount ?? r.amount), 0)
   const paid_this_month_payroll = allPayroll
     .filter((r) => r.status === 'paid' && r.completed_at >= monthStartForPayroll)
-    .reduce((s, r) => s + Number(r.amount), 0)
+    .reduce((s, r) => s + Number(r.converted_amount ?? r.amount), 0)
 
   return {
     kpis: {
@@ -701,23 +704,31 @@ export async function dbGetMemberDashboard(
 
   // Income KPIs for this member
   const monthStart = monthStartStr()
-  const { data: incomeRows } = await supabase
-    .from('member_income')
-    .select('amount, currency, status, completed_at')
-    .eq('organization_id', orgId)
-    .eq('member_id', userId)
+  const [{ data: incomeRows }, { data: memberProfileRow }] = await Promise.all([
+    supabase
+      .from('member_income')
+      .select('amount, currency, member_currency, converted_amount, status, completed_at')
+      .eq('organization_id', orgId)
+      .eq('member_id', userId),
+    supabase
+      .from('profiles')
+      .select('preferred_currency')
+      .eq('id', userId)
+      .maybeSingle(),
+  ])
 
-  const allIncome = incomeRows ?? []
-  const currency  = allIncome[0]?.currency ?? 'USD'
+  const allIncome       = incomeRows ?? []
+  // Always use the member's profile preferred_currency as the display currency
+  const preferredCurrency = memberProfileRow?.preferred_currency ?? allIncome[0]?.member_currency ?? allIncome[0]?.currency ?? 'USD'
 
   const income_kpis = {
     this_month_income: allIncome
-      .filter((r) => r.status === 'pending' && r.completed_at >= monthStart)
-      .reduce((s, r) => s + Number(r.amount), 0),
-    pending_income:    allIncome.filter((r) => r.status === 'pending').reduce((s, r) => s + Number(r.amount), 0),
-    paid_income:       allIncome.filter((r) => r.status === 'paid').reduce((s, r) => s + Number(r.amount), 0),
+      .filter((r) => r.completed_at >= monthStart)
+      .reduce((s, r) => s + Number(r.converted_amount ?? r.amount), 0),
+    pending_income:    allIncome.filter((r) => r.status === 'pending').reduce((s, r) => s + Number(r.converted_amount ?? r.amount), 0),
+    paid_income:       allIncome.filter((r) => r.status === 'paid').reduce((s, r) => s + Number(r.converted_amount ?? r.amount), 0),
     completed_tasks:   allIncome.length,
-    currency,
+    currency:          preferredCurrency,
   }
 
   return { kpis, income_kpis, my_tasks, review_status, upcoming, assigned_projects, recent_activity }

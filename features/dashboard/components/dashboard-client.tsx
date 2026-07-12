@@ -2,10 +2,12 @@
 
 import { AlertCircle, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ErrorBoundary } from '@/components/error-boundary'
 import { useDashboard } from '../hooks/use-dashboard'
 import { AdminDashboard } from './admin-dashboard'
 import { PmDashboard } from './pm-dashboard'
 import { MemberDashboard } from './member-dashboard'
+import { useOrganizationContext } from '@/components/providers/organization-provider'
 import type { AdminDashboardData, PmDashboardData, MemberDashboardData, DashboardData } from '../types'
 
 const LOADING_SKELETON: AdminDashboardData = {
@@ -32,9 +34,11 @@ const LOADING_SKELETON: AdminDashboardData = {
 
 export function DashboardClient() {
   const { data, isLoading, isError, refetch } = useDashboard()
+  const { organization } = useOrganizationContext()
+  const orgName = organization?.name ?? ''
 
   if (isLoading) {
-    return <AdminDashboard data={LOADING_SKELETON} loading />
+    return <AdminDashboard data={LOADING_SKELETON} orgName={orgName} loading />
   }
 
   if (isError || !data) {
@@ -58,12 +62,24 @@ export function DashboardClient() {
   const d = data as DashboardData
 
   if (d.role === 'owner' || d.role === 'admin') {
-    return <AdminDashboard data={d as AdminDashboardData} />
+    return (
+      <ErrorBoundary label="admin-dashboard">
+        <AdminDashboard data={d as AdminDashboardData} orgName={orgName} />
+      </ErrorBoundary>
+    )
   }
 
   if (d.role === 'project_manager') {
-    return <PmDashboard data={d as PmDashboardData} />
+    return (
+      <ErrorBoundary label="pm-dashboard">
+        <PmDashboard data={d as PmDashboardData} />
+      </ErrorBoundary>
+    )
   }
 
-  return <MemberDashboard data={d as MemberDashboardData} />
+  return (
+    <ErrorBoundary label="member-dashboard">
+      <MemberDashboard data={d as MemberDashboardData} />
+    </ErrorBoundary>
+  )
 }

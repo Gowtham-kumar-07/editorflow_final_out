@@ -104,4 +104,67 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+
+  /* ─── Table row entrance stagger ──────────────────────────────────────────── */
+  [data-animate-rows] tr {
+    animation: row-in 220ms ease-out both;
+  }
+  [data-animate-rows] tr:nth-child(1)    { animation-delay:   0ms; }
+  [data-animate-rows] tr:nth-child(2)    { animation-delay:  30ms; }
+  [data-animate-rows] tr:nth-child(3)    { animation-delay:  60ms; }
+  [data-animate-rows] tr:nth-child(4)    { animation-delay:  90ms; }
+  [data-animate-rows] tr:nth-child(5)    { animation-delay: 115ms; }
+  [data-animate-rows] tr:nth-child(6)    { animation-delay: 140ms; }
+  [data-animate-rows] tr:nth-child(7)    { animation-delay: 165ms; }
+  [data-animate-rows] tr:nth-child(8)    { animation-delay: 190ms; }
+  [data-animate-rows] tr:nth-child(9)    { animation-delay: 215ms; }
+  [data-animate-rows] tr:nth-child(n+10) { animation-delay: 240ms; }
+
+  /* Honor reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    [data-animate-rows] tr {
+      animation: none;
+    }
+    .skeleton-shimmer {
+      animation: none !important;
+    }
+    .page-transition {
+      animation: none !important;
+    }
+  }
+}
+
+/* ─── Keyframes ───────────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ─── Utility classes ─────────────────────────────────────────────────────── */
+
+.skeleton-shimmer {
+  background-color: hsl(var(--muted));
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--muted))                   0%,
+    hsl(var(--muted-foreground) / 0.09) 50%,
+    hsl(var(--muted))                   100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.page-transition {
+  animation: page-in 210ms ease-out both;
 }

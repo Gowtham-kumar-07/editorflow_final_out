@@ -78,7 +78,7 @@ export function RecentActivityWidget({ items, loading = false }: RecentActivityW
               const text = buildActivityText(item)
               return (
                 <div key={item.id} className="flex items-start gap-3">
-                  <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0 mt-2" />
+                  <div className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                   <div className="min-w-0">
                     {href ? (
                       <Link href={href} className="text-sm hover:underline text-foreground/90 leading-snug">

@@ -114,7 +114,7 @@ export function SignupForm({ email: prefillEmail, next }: Props) {
           <p className="text-sm text-muted-foreground">
             We sent a confirmation link to{' '}
             <strong>{form.getValues('email')}</strong>. Click it to activate
-            your account and return to your invitation.
+            your account and continue.
           </p>
         </div>
       </div>

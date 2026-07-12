@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/logger'
 import type { Database } from '@/types/supabase'
 import type { ActionResult } from './index'
 import type { ProjectStats, TaskWithAssignee, TeamMember, ActivityItem } from '../types/workspace'
@@ -56,8 +57,8 @@ export async function getProjectStats(
     return { ok: true, data: stats }
   } catch (err) {
     const pg = err as Record<string, unknown>
-    if (pg?.code) return { ok: false, error: `[${pg.code}] ${pg.message}` }
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    logger.error('workspace action failed', { code: (pg?.code as string | undefined) ?? 'unknown' })
+    return { ok: false, error: 'Could not load project data. Please try again.' }
   }
 }
 
@@ -70,8 +71,8 @@ export async function getProjectTasksPreview(
     return { ok: true, data: tasks }
   } catch (err) {
     const pg = err as Record<string, unknown>
-    if (pg?.code) return { ok: false, error: `[${pg.code}] ${pg.message}` }
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    logger.error('workspace action failed', { code: (pg?.code as string | undefined) ?? 'unknown' })
+    return { ok: false, error: 'Could not load project data. Please try again.' }
   }
 }
 
@@ -84,8 +85,8 @@ export async function getProjectTeam(
     return { ok: true, data: team }
   } catch (err) {
     const pg = err as Record<string, unknown>
-    if (pg?.code) return { ok: false, error: `[${pg.code}] ${pg.message}` }
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    logger.error('workspace action failed', { code: (pg?.code as string | undefined) ?? 'unknown' })
+    return { ok: false, error: 'Could not load project data. Please try again.' }
   }
 }
 
@@ -98,7 +99,7 @@ export async function getProjectActivity(
     return { ok: true, data: activity }
   } catch (err) {
     const pg = err as Record<string, unknown>
-    if (pg?.code) return { ok: false, error: `[${pg.code}] ${pg.message}` }
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    logger.error('workspace action failed', { code: (pg?.code as string | undefined) ?? 'unknown' })
+    return { ok: false, error: 'Could not load project data. Please try again.' }
   }
 }

@@ -3,24 +3,18 @@
 import { DollarSign, TrendingUp, Clock, Activity } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatCurrency } from '@/utils/format'
 import type { PaymentSummaryMetrics } from '../types'
 
-function fmtAmount(n: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n)
-}
-
 interface SummaryCardProps {
-  title:   string
-  value:   string | number
-  icon:    React.ReactNode
-  sub?:    string
-  money?:  boolean
+  title:    string
+  value:    string | number
+  icon:     React.ReactNode
+  sub?:     string
+  currency?: string
 }
 
-function SummaryCard({ title, value, icon, sub, money }: SummaryCardProps) {
+function SummaryCard({ title, value, icon, sub, currency }: SummaryCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -28,8 +22,8 @@ function SummaryCard({ title, value, icon, sub, money }: SummaryCardProps) {
         <div className="text-muted-foreground">{icon}</div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">
-          {money ? `₹${fmtAmount(value as number)}` : value}
+        <div className="text-2xl font-bold tabular-nums">
+          {currency ? formatCurrency(value as number, currency) : value}
         </div>
         {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
       </CardContent>
@@ -72,21 +66,21 @@ export function PaymentSummaryGrid({ metrics, loading }: PaymentSummaryGridProps
         title="Total Collected"
         value={metrics.total_collected}
         icon={<DollarSign className="h-4 w-4" />}
-        money
+        currency={metrics.base_currency}
         sub="All completed payments"
       />
       <SummaryCard
         title="Collected This Month"
         value={metrics.collected_this_month}
         icon={<TrendingUp className="h-4 w-4" />}
-        money
+        currency={metrics.base_currency}
         sub="This calendar month"
       />
       <SummaryCard
         title="Outstanding Balance"
         value={metrics.outstanding_balance}
         icon={<Clock className="h-4 w-4" />}
-        money
+        currency={metrics.base_currency}
         sub="Across open invoices"
       />
       <SummaryCard

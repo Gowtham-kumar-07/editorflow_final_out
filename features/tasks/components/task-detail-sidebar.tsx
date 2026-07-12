@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { formatDate } from '@/utils/format'
 import { TaskWorkflowActions } from './task-workflow-actions'
 import { TaskPriorityBadge } from './task-priority-badge'
-import { useTask } from '../hooks/use-tasks'
+import { useTask, useTaskIncome } from '../hooks/use-tasks'
 import type { TaskWithDetails } from '../types'
 import type { OrgRole } from '@/types/supabase'
 
@@ -46,6 +46,9 @@ type Props = {
 export function TaskDetailSidebar({ initialTask, userRole, isAssignee }: Props) {
   const { data: task } = useTask(initialTask.id, { initialData: initialTask })
   const t = task ?? initialTask
+
+  const showIncome = t.status === 'completed' && t.amount > 0 && !!t.assigned_to
+  const { data: income } = useTaskIncome(t.id, showIncome)
 
   const dueDate   = t.due_date ? new Date(t.due_date) : null
   const isOverdue =
@@ -128,7 +131,27 @@ export function TaskDetailSidebar({ initialTask, userRole, isAssignee }: Props) 
             <Separator />
             <DetailRow icon={DollarSign} label="Task Amount">
               {t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="ml-1 text-xs text-muted-foreground">{t.task_currency ?? 'USD'}</span>
             </DetailRow>
+
+            {/* Member Receives — shown when income record exists with FX conversion */}
+            {income && income.member_currency && income.member_currency !== (t.task_currency ?? 'USD') && (
+              <>
+                <Separator />
+                <DetailRow icon={DollarSign} label="Member Receives">
+                  <span className="font-medium">
+                    {(income.converted_amount ?? income.original_amount ?? t.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <span className="ml-1 text-xs text-muted-foreground font-normal">{income.member_currency}</span>
+                  </span>
+                  {income.fx_rate && income.fx_rate !== 1 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      1 {t.task_currency} = {income.fx_rate.toFixed(4)} {income.member_currency}
+                      {income.fx_snapshot_date && ` · ${income.fx_snapshot_date}`}
+                    </p>
+                  )}
+                </DetailRow>
+              </>
+            )}
           </>
         )}
 

@@ -5,6 +5,7 @@ import { createClient } from '@/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, OrgRole } from '@/types/supabase'
 import { canEditSettings }        from '@/lib/permissions'
+import { logger }                 from '@/lib/logger'
 import {
   dbGetOrgSettings,
   dbGetProfileSettings,
@@ -75,7 +76,7 @@ export async function getSettingsAction(): Promise<SettingsPageData> {
   ])
 
   return {
-    profile: profile ?? { id: userId, full_name: null, email: null, avatar_url: null },
+    profile: profile ?? { id: userId, full_name: null, email: null, avatar_url: null, preferred_currency: 'USD' },
     org:     org,
   }
 }
@@ -102,11 +103,20 @@ export async function getOrgDefaultsAction(): Promise<{
 
 export async function updateProfileAction(
   values: ProfileFormValues
-): Promise<ActionResult<{ full_name: string }>> {
+): Promise<ActionResult<{ full_name: string; preferred_currency: string }>> {
   try {
     const { supabase } = await resolveContext()
-    const updated = await dbUpdateProfile(supabase, values)
-    return { ok: true, data: { full_name: updated.full_name ?? values.full_name } }
+    const updated = await dbUpdateProfile(supabase, {
+      full_name:          values.full_name,
+      preferred_currency: values.preferred_currency,
+    })
+    return {
+      ok:   true,
+      data: {
+        full_name:          updated.full_name          ?? values.full_name,
+        preferred_currency: updated.preferred_currency ?? values.preferred_currency,
+      },
+    }
   } catch (err) {
     const pg = err as { code?: string; message?: string }
     if (pg.code === 'P0010') return { ok: false, error: 'Name is required.' }
@@ -121,10 +131,8 @@ type PgError = { code?: string; message?: string; details?: string; hint?: strin
 
 function mapOrgSettingsError(err: unknown): string {
   const pg = err as PgError
-  // Structured dev log — excludes update payload so bank values never appear in logs
-  console.error('[settings] patchOrg error', {
+  logger.error('settings patchOrg failed', {
     code:    pg.code    ?? 'unknown',
-    message: pg.message ?? String(err),
     details: pg.details ?? null,
     hint:    pg.hint    ?? null,
   })

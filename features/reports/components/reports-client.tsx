@@ -5,6 +5,7 @@ import type { OrgRole } from '@/types/supabase'
 import { canViewFinancialReports } from '@/lib/permissions'
 import { ADMIN_TABS, PM_TABS, type ReportTab, type ReportTabDef } from '../types'
 import { parseDateRangeParams, type DatePreset } from '../utils/date-range'
+import { ErrorBoundary } from '@/components/error-boundary'
 import { ReportTabBar }    from './report-tab-bar'
 import { ReportDateFilter } from './report-date-filter'
 import { OverviewReportView }    from './overview-report'
@@ -75,8 +76,10 @@ export function ReportsClient({ role }: ReportsClientProps) {
         onChange={setTab}
       />
 
-      {/* Active tab content */}
-      <ReportContent tab={activeTab} dateRange={dateRange} />
+      {/* Active tab content — wrapped so a single tab crash doesn't kill the page */}
+      <ErrorBoundary key={activeTab} label={`report-tab-${activeTab}`}>
+        <ReportContent tab={activeTab} dateRange={dateRange} />
+      </ErrorBoundary>
     </div>
   )
 }

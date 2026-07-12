@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -20,6 +20,7 @@ export function TaskSearchFilters({ projects, members, currentUserId }: Props) {
   const router       = useRouter()
   const pathname     = usePathname()
   const searchParams = useSearchParams()
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const updateParam = useCallback(
     (key: string, value: string) => {
@@ -53,9 +54,8 @@ export function TaskSearchFilters({ projects, members, currentUserId }: Props) {
           defaultValue={searchParams.get('search') ?? ''}
           onChange={(e) => {
             const val = e.target.value
-            clearTimeout((window as unknown as { _taskSearch?: ReturnType<typeof setTimeout> })._taskSearch)
-            ;(window as unknown as { _taskSearch?: ReturnType<typeof setTimeout> })._taskSearch =
-              setTimeout(() => updateParam('search', val), 300)
+            if (debounceRef.current) clearTimeout(debounceRef.current)
+            debounceRef.current = setTimeout(() => updateParam('search', val), 300)
           }}
         />
       </div>

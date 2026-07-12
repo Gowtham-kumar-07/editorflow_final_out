@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Receipt, Ban } from 'lucide-react'
-import { formatDate } from '@/utils/format'
+import { formatDate, formatCurrency } from '@/utils/format'
 import {
   Table,
   TableBody,
@@ -20,12 +20,6 @@ import type { PaymentListItem } from '../types'
 import type { OrgRole } from '@/types/supabase'
 import { canVoidPayment } from '@/lib/permissions'
 
-function fmtMoney(amount: number) {
-  return new Intl.NumberFormat('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
 
 interface PaymentsTableProps {
   payments:  PaymentListItem[]
@@ -133,7 +127,7 @@ export function PaymentsTable({ payments, role, loading }: PaymentsTableProps) {
               </TableCell>
 
               <TableCell className="text-right font-mono text-sm font-medium whitespace-nowrap">
-                {p.invoice_currency} {fmtMoney(p.amount)}
+                {formatCurrency(p.amount, p.invoice_currency)}
               </TableCell>
 
               <TableCell>

@@ -1,7 +1,7 @@
 'use client'
 
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -27,13 +27,20 @@ const SORT_OPTIONS = [
 ]
 
 export function InvoiceSearchFilters() {
-  const router     = useRouter()
-  const pathname   = usePathname()
+  const router       = useRouter()
+  const pathname     = usePathname()
   const searchParams = useSearchParams()
+  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const search  = searchParams.get('search')  ?? ''
-  const status  = searchParams.get('status')  ?? 'all'
-  const sortBy  = searchParams.get('sortBy')  ?? 'created_at'
+  const [searchValue, setSearchValue] = useState(searchParams.get('search') ?? '')
+
+  const status = searchParams.get('status') ?? 'all'
+  const sortBy = searchParams.get('sortBy') ?? 'created_at'
+
+  // Sync controlled input when URL is cleared externally
+  useEffect(() => {
+    setSearchValue(searchParams.get('search') ?? '')
+  }, [searchParams])
 
   const updateParam = useCallback(
     (key: string, value: string | null) => {
@@ -43,13 +50,26 @@ export function InvoiceSearchFilters() {
       } else {
         params.set(key, value)
       }
-      params.delete('page')  // reset pagination on filter change
+      params.delete('page')
       router.push(`${pathname}?${params.toString()}`)
     },
     [router, pathname, searchParams]
   )
 
-  const hasActiveFilters = search !== '' || status !== 'all' || sortBy !== 'created_at'
+  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setSearchValue(val)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => updateParam('search', val || null), 300)
+  }
+
+  function clearAll() {
+    setSearchValue('')
+    if (timerRef.current) clearTimeout(timerRef.current)
+    router.push(pathname)
+  }
+
+  const hasActiveFilters = searchValue !== '' || status !== 'all' || sortBy !== 'created_at'
 
   return (
     <div className="flex flex-col sm:flex-row gap-3">
@@ -59,14 +79,8 @@ export function InvoiceSearchFilters() {
         <Input
           className="pl-9"
           placeholder="Search by invoice # or client…"
-          defaultValue={search}
-          onChange={(e) => {
-            const val = e.target.value
-            const params = new URLSearchParams(searchParams.toString())
-            if (val) { params.set('search', val) } else { params.delete('search') }
-            params.delete('page')
-            router.push(`${pathname}?${params.toString()}`)
-          }}
+          value={searchValue}
+          onChange={handleSearchChange}
         />
       </div>
 
@@ -100,15 +114,10 @@ export function InvoiceSearchFilters() {
         </SelectContent>
       </Select>
 
-      {/* Clear */}
       {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push(pathname)}
-          aria-label="Clear filters"
-        >
-          <X className="h-4 w-4" />
+        <Button variant="ghost" size="sm" onClick={clearAll} className="gap-1">
+          <X className="h-3.5 w-3.5" />
+          Clear
         </Button>
       )}
     </div>

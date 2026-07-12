@@ -1,18 +1,56 @@
 'use client'
 
 import { useState } from 'react'
+import { Banknote } from 'lucide-react'
 import { formatDate } from '@/utils/format'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/shared/empty-state'
 import { IncomeStatusBadge } from './income-status-badge'
 import { MarkPaidDialog } from './mark-paid-dialog'
 import type { IncomeListItem } from '../types'
 
 interface IncomeTableProps {
-  items:         IncomeListItem[]
-  canManage:     boolean
+  items:     IncomeListItem[]
+  canManage: boolean
+}
+
+function fmtAmt(n: number, currency: string) {
+  return (
+    <>
+      <span className="font-mono">
+        {n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </span>
+      <span className="ml-1 text-xs text-muted-foreground">{currency}</span>
+    </>
+  )
+}
+
+function AmountCell({ item }: { item: IncomeListItem }) {
+  // Use explicit FX columns: converted_amount + member_currency are set by the FX snapshot RPC
+  const hasFx =
+    item.converted_amount != null &&
+    item.member_currency  != null &&
+    item.original_currency != null &&
+    item.member_currency !== item.original_currency
+
+  if (hasFx) {
+    return (
+      <span className="flex flex-col items-end gap-0.5">
+        <span className="text-xs text-muted-foreground">
+          {fmtAmt(item.original_amount!, item.original_currency!)}
+        </span>
+        <span>{fmtAmt(item.converted_amount!, item.member_currency!)}</span>
+      </span>
+    )
+  }
+
+  // Same-currency or pre-FX: prefer member_currency/converted_amount when available
+  const displayAmount   = item.converted_amount ?? item.original_amount ?? item.amount
+  const displayCurrency = item.member_currency  ?? item.original_currency ?? item.currency
+  return <>{fmtAmt(displayAmount, displayCurrency)}</>
 }
 
 export function IncomeTable({ items, canManage }: IncomeTableProps) {
@@ -20,9 +58,11 @@ export function IncomeTable({ items, canManage }: IncomeTableProps) {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-        <p className="text-sm">No income records found.</p>
-      </div>
+      <EmptyState
+        icon={Banknote}
+        title="No income records"
+        description="Income records appear here as tasks are completed and marked as paid."
+      />
     )
   }
 
@@ -53,9 +93,8 @@ export function IncomeTable({ items, canManage }: IncomeTableProps) {
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {formatDate(item.completed_at)}
                 </TableCell>
-                <TableCell className="text-right font-mono whitespace-nowrap">
-                  {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  <span className="ml-1 text-xs text-muted-foreground">{item.currency}</span>
+                <TableCell className="text-right whitespace-nowrap">
+                  <AmountCell item={item} />
                 </TableCell>
                 <TableCell><IncomeStatusBadge status={item.status} /></TableCell>
                 <TableCell className="text-muted-foreground whitespace-nowrap">

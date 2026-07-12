@@ -36,6 +36,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
           icon={ListTodo}
           href="/tasks"
           loading={loading}
+          index={0}
         />
         <DashboardKpiCard
           title="In Progress"
@@ -44,6 +45,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
           href="/tasks?status=in_progress"
           colorClass="text-emerald-500"
           loading={loading}
+          index={1}
         />
         <DashboardKpiCard
           title="Awaiting Review"
@@ -52,6 +54,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
           href="/tasks?status=review"
           colorClass="text-violet-500"
           loading={loading}
+          index={2}
         />
         <DashboardKpiCard
           title="Overdue"
@@ -59,6 +62,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
           icon={AlertTriangle}
           colorClass={kpis.overdue > 0 ? 'text-red-500' : 'text-muted-foreground'}
           loading={loading}
+          index={3}
         />
         <DashboardKpiCard
           title="Due This Week"
@@ -66,6 +70,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
           icon={Calendar}
           colorClass="text-amber-500"
           loading={loading}
+          index={4}
         />
       </div>
 
@@ -81,6 +86,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
             currency={income_kpis.currency}
             colorClass="text-emerald-500"
             loading={loading}
+            index={0}
           />
           <DashboardKpiCard
             title="Pending Income"
@@ -91,6 +97,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
             currency={income_kpis.currency}
             colorClass="text-amber-500"
             loading={loading}
+            index={1}
           />
           <DashboardKpiCard
             title="Paid Income"
@@ -101,6 +108,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
             currency={income_kpis.currency}
             colorClass="text-blue-500"
             loading={loading}
+            index={2}
           />
           <DashboardKpiCard
             title="Completed Tasks"
@@ -108,6 +116,7 @@ export function MemberDashboard({ data, loading = false }: MemberDashboardProps)
             icon={CheckCircle2}
             colorClass="text-muted-foreground"
             loading={loading}
+            index={3}
           />
         </div>
       )}

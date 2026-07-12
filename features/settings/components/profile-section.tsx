@@ -7,11 +7,15 @@ import { useRouter } from 'next/navigation'
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { SectionCard } from './section-card'
 import { updateProfileAction } from '../actions'
 import { profileSchema, type ProfileFormValues } from '../schema'
+import { SUPPORTED_CURRENCIES } from '@/lib/currencies'
 import type { ProfileSettings } from '../types'
 
 interface ProfileSectionProps {
@@ -23,7 +27,10 @@ export function ProfileSection({ profile }: ProfileSectionProps) {
 
   const form = useForm<ProfileFormValues>({
     resolver:      zodResolver(profileSchema),
-    defaultValues: { full_name: profile.full_name ?? '' },
+    defaultValues: {
+      full_name:          profile.full_name          ?? '',
+      preferred_currency: profile.preferred_currency ?? 'USD',
+    },
   })
 
   const { isDirty, isSubmitting } = form.formState
@@ -48,7 +55,7 @@ export function ProfileSection({ profile }: ProfileSectionProps) {
     <SectionCard
       id="profile"
       title="Personal Profile"
-      description="Your name and account information."
+      description="Your name, account information, and currency preference."
       onSave={form.handleSubmit(handleSave)}
       saving={isSubmitting}
       dirty={isDirty}
@@ -76,6 +83,34 @@ export function ProfileSection({ profile }: ProfileSectionProps) {
             </div>
             <p className="text-xs text-muted-foreground">Email is managed by your account provider.</p>
           </div>
+
+          <FormField
+            control={form.control}
+            name="preferred_currency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preferred Currency</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {SUPPORTED_CURRENCIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Task earnings are converted to this currency when completed.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       </Form>
     </SectionCard>

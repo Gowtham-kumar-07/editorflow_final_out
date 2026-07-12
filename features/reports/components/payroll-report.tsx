@@ -4,15 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { usePayrollReport } from '../hooks/use-reports'
+import type { PayrollMemberRow } from '../types'
 
 function fmt(n: number, currency: string) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + currency
 }
 
-function downloadCsv(rows: { member_name: string | null; pending_count: number; pending_amount: number; paid_count: number; paid_amount: number; currency: string }[]) {
-  const header = 'Member,Pending Tasks,Pending Amount,Paid Tasks,Paid Amount,Currency'
+function downloadCsv(rows: PayrollMemberRow[]) {
+  const header = 'Member,Pending Tasks,Pending Amount,Paid Tasks,Paid Amount,Currency,Task Currency'
   const lines  = rows.map((r) =>
-    [r.member_name ?? 'Unknown', r.pending_count, r.pending_amount.toFixed(2), r.paid_count, r.paid_amount.toFixed(2), r.currency].join(',')
+    [
+      r.member_name ?? 'Unknown',
+      r.pending_count,
+      r.pending_amount.toFixed(2),
+      r.paid_count,
+      r.paid_amount.toFixed(2),
+      r.currency,
+      r.original_currency ?? r.currency,
+    ].join(',')
   )
   const blob = new Blob([[header, ...lines].join('\n')], { type: 'text/csv' })
   const url  = URL.createObjectURL(blob)
@@ -28,7 +37,7 @@ export function PayrollReportView() {
 
   const rows     = data?.rows    ?? []
   const totals   = data?.totals
-  const currency = data?.currency ?? 'USD'
+  const currency = data?.currency ?? null  // null = mixed currencies
 
   return (
     <div className="space-y-6">
@@ -56,8 +65,8 @@ export function PayrollReportView() {
         </Card>
       ) : (
         <>
-          {/* Summary cards */}
-          {totals && (
+          {/* Summary cards — only shown when all members share the same currency */}
+          {totals && currency && (
             <div className="grid gap-4 sm:grid-cols-2">
               <Card>
                 <CardContent className="pt-4">
@@ -99,7 +108,14 @@ export function PayrollReportView() {
                   <tbody className="divide-y">
                     {rows.map((r) => (
                       <tr key={r.member_id} className="py-2">
-                        <td className="py-2 font-medium">{r.member_name ?? '—'}</td>
+                        <td className="py-2">
+                          <span className="font-medium">{r.member_name ?? '—'}</span>
+                          {r.original_currency && r.original_currency !== r.currency && (
+                            <span className="ml-1.5 text-xs text-muted-foreground">
+                              ({r.original_currency === 'mixed' ? 'multiple task currencies' : `tasks in ${r.original_currency}`} → {r.currency})
+                            </span>
+                          )}
+                        </td>
                         <td className="py-2 text-right">
                           {r.pending_count > 0 ? (
                             <span className="inline-flex items-center gap-1.5">

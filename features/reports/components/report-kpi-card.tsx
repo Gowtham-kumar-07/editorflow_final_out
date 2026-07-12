@@ -21,7 +21,7 @@ export function ReportKpiCard({
   value,
   icon:  Icon,
   isCurrency = false,
-  currency   = 'USD',
+  currency,
   suffix,
   colorClass = 'text-foreground',
   loading    = false,
@@ -29,7 +29,7 @@ export function ReportKpiCard({
 }: ReportKpiCardProps) {
   function display(): string {
     if (value === null || value === undefined) return '—'
-    if (isCurrency) return formatCurrency(value, currency)
+    if (isCurrency) return formatCurrency(value, currency ?? 'USD')
     const formatted = new Intl.NumberFormat('en-US').format(value)
     return suffix ? `${formatted}${suffix}` : formatted
   }

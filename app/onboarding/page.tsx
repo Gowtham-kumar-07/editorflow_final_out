@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 
 import { createClient } from '@/supabase/server'
 import { getUserOrganization } from '@/services/organization.service'
-import { OrganizationForm } from '@/features/onboarding/components/organization-form'
+import { OrgWizard } from '@/features/onboarding/components/org-wizard'
 import { APP_NAME } from '@/lib/constants'
 
 export const metadata: Metadata = {
@@ -17,7 +17,6 @@ export default async function OnboardingPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Middleware should have caught unauthenticated requests, but guard here too
   if (!user) redirect('/login')
 
   // Already belongs to an organization — send straight to the app
@@ -35,15 +34,15 @@ export default async function OnboardingPage() {
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm">
+      <div className="w-full max-w-lg rounded-2xl border bg-card p-8 shadow-sm">
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Set up your organization</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            This only takes a minute. You can always update these details later.
+            This takes about a minute. You can update everything later in Settings.
           </p>
         </div>
 
-        <OrganizationForm />
+        <OrgWizard />
       </div>
 
       {/* Footer */}

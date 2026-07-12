@@ -34,6 +34,7 @@ export function PmDashboard({ data, loading = false }: PmDashboardProps) {
           icon={FolderKanban}
           href="/projects"
           loading={loading}
+          index={0}
         />
         <DashboardKpiCard
           title="In Progress"
@@ -42,6 +43,7 @@ export function PmDashboard({ data, loading = false }: PmDashboardProps) {
           href="/tasks?status=in_progress"
           colorClass="text-emerald-500"
           loading={loading}
+          index={1}
         />
         <DashboardKpiCard
           title="Tasks in Review"
@@ -50,6 +52,7 @@ export function PmDashboard({ data, loading = false }: PmDashboardProps) {
           href="/tasks?status=review"
           colorClass="text-violet-500"
           loading={loading}
+          index={2}
         />
         <DashboardKpiCard
           title="Overdue Tasks"
@@ -57,6 +60,7 @@ export function PmDashboard({ data, loading = false }: PmDashboardProps) {
           icon={AlertTriangle}
           colorClass={kpis.overdue_tasks > 0 ? 'text-red-500' : 'text-muted-foreground'}
           loading={loading}
+          index={3}
         />
         <DashboardKpiCard
           title="Active Members"
@@ -64,6 +68,7 @@ export function PmDashboard({ data, loading = false }: PmDashboardProps) {
           icon={Users}
           href="/team"
           loading={loading}
+          index={4}
         />
         <DashboardKpiCard
           title="On Hold"
@@ -71,6 +76,7 @@ export function PmDashboard({ data, loading = false }: PmDashboardProps) {
           icon={PauseCircle}
           colorClass="text-amber-500"
           loading={loading}
+          index={5}
         />
       </div>
 

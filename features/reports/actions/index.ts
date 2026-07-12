@@ -63,15 +63,24 @@ async function resolveReportContext() {
 
   if (!canViewReports(role)) redirect('/dashboard')
 
-  return { supabase, orgId, userId: user.id, role }
+  const { data: orgData } = await supabase
+    .from('organizations')
+    .select('default_currency, default_payroll_currency')
+    .eq('id', orgId)
+    .maybeSingle()
+
+  const orgCurrency        = orgData?.default_currency         ?? 'USD'
+  const orgPayrollCurrency = orgData?.default_payroll_currency ?? orgCurrency
+
+  return { supabase, orgId, userId: user.id, role, orgCurrency, orgPayrollCurrency }
 }
 
 // ─── Report actions ───────────────────────────────────────────────────────────
 
 export async function getOverviewReportAction(params: ReportParams): Promise<OverviewReport> {
-  const { supabase, orgId, role } = await resolveReportContext()
+  const { supabase, orgId, role, orgCurrency } = await resolveReportContext()
   if (!canViewFinancialReports(role)) redirect('/reports?tab=projects')
-  return dbGetOverviewReport(supabase, orgId, params.from, params.to)
+  return dbGetOverviewReport(supabase, orgId, params.from, params.to, orgCurrency)
 }
 
 export async function getRevenueReportAction(params: ReportParams): Promise<RevenueReport> {

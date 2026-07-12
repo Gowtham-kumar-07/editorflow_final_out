@@ -41,6 +41,11 @@ export const taskFormSchema = z.object({
   amount: z
     .number()
     .min(0, 'Amount cannot be negative'),
+
+  task_currency: z
+    .string()
+    .min(3, 'Must be a 3-letter code')
+    .max(3, 'Must be a 3-letter code'),
 })
 
 // ─── Derived types ────────────────────────────────────────────────────────────
@@ -59,6 +64,7 @@ export const TASK_FORM_DEFAULTS: TaskFormValues = {
   due_date:        '',
   estimated_hours: '',
   amount:          0,
+  task_currency:   'USD',
 }
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
@@ -74,6 +80,7 @@ export function taskToFormValues(task: TaskWithDetails): TaskFormValues {
     due_date:        task.due_date         ?? '',
     estimated_hours: task.estimated_hours != null ? String(task.estimated_hours) : '',
     amount:          task.amount           ?? 0,
+    task_currency:   task.task_currency    ?? 'USD',
   }
 }
 
@@ -88,5 +95,6 @@ export function formValuesToTaskData(values: TaskFormValues) {
     due_date:        values.due_date        || null,
     estimated_hours: values.estimated_hours ? Number(values.estimated_hours) : null,
     amount:          values.amount          ?? 0,
+    task_currency:   values.task_currency   ?? 'USD',
   }
 }

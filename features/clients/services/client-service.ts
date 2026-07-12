@@ -161,6 +161,7 @@ export async function fetchClientInvoices(
     issue_date:     inv.issue_date,
     due_date:       inv.due_date,
     total:          inv.total,
+    currency:       inv.currency ?? 'USD',
     created_at:     inv.created_at,
   }))
 }

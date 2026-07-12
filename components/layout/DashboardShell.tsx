@@ -10,8 +10,9 @@ import {
 } from '@/components/ui/sheet'
 import { GlobalSearchProvider } from '@/features/global-search/context/global-search-context'
 import { GlobalSearchDialog }   from '@/features/global-search/components/global-search-dialog'
-import { Sidebar } from './sidebar'
-import { Header } from './header'
+import { Sidebar }        from './sidebar'
+import { Header }         from './header'
+import { PageTransition } from './page-transition'
 import type { ShellUser } from './UserMenu'
 
 export type { ShellUser }
@@ -54,7 +55,7 @@ export function DashboardShell({ children, user, orgName }: DashboardShellProps)
           orgName={orgName}
         />
         <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>

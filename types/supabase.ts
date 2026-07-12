@@ -553,12 +553,19 @@ export type Database = {
         Row: {
           amount: number
           completed_at: string
+          converted_amount: number | null
           created_at: string
           currency: string
+          fx_rate: number | null
+          fx_rate_source: string | null
+          fx_snapshot_date: string | null
           id: string
+          member_currency: string | null
           member_id: string
           notes: string | null
           organization_id: string
+          original_amount: number | null
+          original_currency: string | null
           paid_at: string | null
           paid_by: string | null
           payment_method: string | null
@@ -570,12 +577,19 @@ export type Database = {
         Insert: {
           amount?: number
           completed_at?: string
+          converted_amount?: number | null
           created_at?: string
           currency?: string
+          fx_rate?: number | null
+          fx_rate_source?: string | null
+          fx_snapshot_date?: string | null
           id?: string
+          member_currency?: string | null
           member_id: string
           notes?: string | null
           organization_id: string
+          original_amount?: number | null
+          original_currency?: string | null
           paid_at?: string | null
           paid_by?: string | null
           payment_method?: string | null
@@ -587,12 +601,19 @@ export type Database = {
         Update: {
           amount?: number
           completed_at?: string
+          converted_amount?: number | null
           created_at?: string
           currency?: string
+          fx_rate?: number | null
+          fx_rate_source?: string | null
+          fx_snapshot_date?: string | null
           id?: string
+          member_currency?: string | null
           member_id?: string
           notes?: string | null
           organization_id?: string
+          original_amount?: number | null
+          original_currency?: string | null
           paid_at?: string | null
           paid_by?: string | null
           payment_method?: string | null
@@ -933,6 +954,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          preferred_currency: string
           updated_at: string
         }
         Insert: {
@@ -942,6 +964,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          preferred_currency?: string
           updated_at?: string
         }
         Update: {
@@ -951,6 +974,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          preferred_currency?: string
           updated_at?: string
         }
         Relationships: [
@@ -1239,6 +1263,7 @@ export type Database = {
           priority: Database["public"]["Enums"]["project_priority"]
           project_id: string
           status: Database["public"]["Enums"]["task_status"]
+          task_currency: string
           title: string
           updated_at: string
         }
@@ -1259,6 +1284,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["project_priority"]
           project_id: string
           status?: Database["public"]["Enums"]["task_status"]
+          task_currency?: string
           title: string
           updated_at?: string
         }
@@ -1279,6 +1305,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["project_priority"]
           project_id?: string
           status?: Database["public"]["Enums"]["task_status"]
+          task_currency?: string
           title?: string
           updated_at?: string
         }
@@ -1397,12 +1424,19 @@ export type Database = {
         Returns: {
           amount: number
           completed_at: string
+          converted_amount: number | null
           created_at: string
           currency: string
+          fx_rate: number | null
+          fx_rate_source: string | null
+          fx_snapshot_date: string | null
           id: string
+          member_currency: string | null
           member_id: string
           notes: string | null
           organization_id: string
+          original_amount: number | null
+          original_currency: string | null
           paid_at: string | null
           paid_by: string | null
           payment_method: string | null
@@ -1464,6 +1498,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_income_fx_snapshot: {
+        Args: {
+          p_converted_amount: number
+          p_fx_rate: number
+          p_fx_rate_source: string
+          p_fx_snapshot_date: string
+          p_member_currency: string
+          p_task_id: string
+        }
+        Returns: undefined
+      }
       update_invoice: {
         Args: {
           p_client_id: string
@@ -1497,7 +1542,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_my_profile: { Args: { p_full_name: string }; Returns: Json }
+      update_my_profile: {
+        Args: { p_full_name: string; p_preferred_currency?: string }
+        Returns: Json
+      }
       update_organization_settings: {
         Args: { p_org_id: string; p_updates: Json }
         Returns: Json

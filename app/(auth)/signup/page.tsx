@@ -17,17 +17,43 @@ type Props = {
 export default async function SignupPage({ searchParams }: Props) {
   const { invite: token, next } = await searchParams
 
-  // ── Invite-only guard ─────────────────────────────────────────────────────
-  // EditorFlow is invite-only. A valid ?invite=<token> is required before the
-  // signup form is shown. Without it, visitors see the invite-required notice.
-  if (!token) {
-    return <InviteGatePage />
+  // ── Invite path: requires valid token ─────────────────────────────────────
+  if (token) {
+    return <InviteSignupPage token={token} next={next} />
   }
 
-  // ── Server-side token validation ──────────────────────────────────────────
-  // The invitation row is fetched with the service role so this works before
-  // the visitor is authenticated. The email shown in the form comes from the
-  // database, never from a query parameter.
+  // ── Self-service path: no token required ──────────────────────────────────
+  const safeNext = next && isSafeRedirect(next) ? next : '/onboarding'
+
+  return (
+    <div className="rounded-2xl border bg-card p-8 shadow-sm">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Start your free 14-day trial. No credit card required.
+        </p>
+      </div>
+
+      <SignupForm next={safeNext} />
+
+      <Separator className="my-6" />
+
+      <p className="text-center text-sm text-muted-foreground">
+        Already have an account?{' '}
+        <Link
+          href="/login"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Sign in
+        </Link>
+      </p>
+    </div>
+  )
+}
+
+// ── Invite-token signup flow ───────────────────────────────────────────────────
+
+async function InviteSignupPage({ token, next }: { token: string; next?: string }) {
   const admin = createServiceClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -40,21 +66,10 @@ export default async function SignupPage({ searchParams }: Props) {
     .eq('token', token)
     .maybeSingle()
 
-  if (!inv) {
-    return <InviteStatusPage type="not_found" />
-  }
+  if (!inv)             return <InviteStatusPage type="not_found" />
+  if (inv.accepted_at)  return <InviteStatusPage type="accepted" />
+  if (new Date(inv.expires_at) <= new Date()) return <InviteStatusPage type="expired" />
 
-  if (inv.accepted_at) {
-    return <InviteStatusPage type="accepted" />
-  }
-
-  if (new Date(inv.expires_at) <= new Date()) {
-    return <InviteStatusPage type="expired" />
-  }
-
-  // ── Valid invitation ───────────────────────────────────────────────────────
-  // After signup the user must return to the invite page to explicitly click
-  // "Join Organization" — acceptance is never automatic.
   const invitePath = `/invite/accept?token=${encodeURIComponent(token)}`
   const safeNext   = next && isSafeRedirect(next) ? next : invitePath
 
@@ -85,27 +100,7 @@ export default async function SignupPage({ searchParams }: Props) {
   )
 }
 
-// ── No-invite gate (shown when /signup is reached without a token) ─────────
-
-function InviteGatePage() {
-  return (
-    <div className="rounded-2xl border bg-card p-8 shadow-sm text-center space-y-4">
-      <h1 className="text-xl font-semibold">Invitation required</h1>
-      <p className="text-sm text-muted-foreground">
-        EditorFlow is invite-only. To create an account, use the link from your
-        invitation or ask your organization administrator for a new invitation.
-      </p>
-      <Link
-        href="/login"
-        className="inline-block text-sm font-medium underline underline-offset-4"
-      >
-        Sign in to an existing account
-      </Link>
-    </div>
-  )
-}
-
-// ── Specific invitation error states ──────────────────────────────────────
+// ── Invitation error states ────────────────────────────────────────────────────
 
 type InviteStatusType = 'not_found' | 'accepted' | 'expired'
 

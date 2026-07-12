@@ -104,7 +104,7 @@ export function Header({
         {/* Notification bell */}
         <NotificationBell />
 
-        <OrganizationSwitcher orgName={orgName} />
+        <OrganizationSwitcher />
 
         <UserMenu user={user} orgName={orgName} />
       </div>

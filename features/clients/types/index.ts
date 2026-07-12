@@ -49,6 +49,7 @@ export interface ClientInvoice {
   issue_date: string
   due_date: string | null
   total: number
+  currency: string
   created_at: string
 }
 

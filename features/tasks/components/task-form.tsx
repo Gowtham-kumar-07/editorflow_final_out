@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator'
 
 import { createTaskAction, updateTaskAction } from '../actions'
 import { taskFormSchema, taskToFormValues, TASK_FORM_DEFAULTS, type TaskFormValues } from '../schema'
+import { SUPPORTED_CURRENCIES } from '@/lib/currencies'
 import type { TaskWithDetails, OrgMember, ProjectOption } from '../types'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -64,12 +65,12 @@ export function TaskForm(props: TaskFormProps) {
       if (props.mode === 'create') {
         const result = await createTaskAction(values)
         if (!result.ok) { setServerError(result.error); return }
-        toast.success(`"${result.data.title}" created.`)
+        toast.success(`"${result.data.title}" created`)
         router.push(`/tasks/${result.data.id}`)
       } else {
         const result = await updateTaskAction(props.task.id, values)
         if (!result.ok) { setServerError(result.error); return }
-        toast.success('Task updated.')
+        toast.success('Task updated')
         router.push(`/tasks/${props.task.id}`)
         router.refresh()
       }
@@ -251,23 +252,50 @@ export function TaskForm(props: TaskFormProps) {
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="amount" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Task Amount</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
+            <div className="sm:col-span-2 grid grid-cols-2 gap-3 items-start">
+              <FormField control={form.control} name="amount" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Task Amount</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      disabled={!canEditAmount}
+                      value={field.value ?? 0}
+                      onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="task_currency" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Currency</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
                     disabled={!canEditAmount}
-                    value={field.value ?? 0}
-                    onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="USD" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {SUPPORTED_CURRENCIES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
           </div>
         </section>
 
