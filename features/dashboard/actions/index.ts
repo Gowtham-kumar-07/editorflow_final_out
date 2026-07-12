@@ -53,17 +53,21 @@ async function resolveDashboardContext() {
 export async function getDashboardDataAction(): Promise<DashboardData> {
   const { supabase, orgId, userId, role } = await resolveDashboardContext()
 
-  if (role === 'owner' || role === 'admin') {
-    const data = await dbGetAdminDashboard(supabase, orgId)
-    return { role, ...data }
-  }
+  try {
+    if (role === 'owner' || role === 'admin') {
+      const data = await dbGetAdminDashboard(supabase, orgId)
+      return { role, ...data }
+    }
 
-  if (role === 'project_manager') {
-    const data = await dbGetPmDashboard(supabase, orgId)
-    return { role, ...data }
-  }
+    if (role === 'project_manager') {
+      const data = await dbGetPmDashboard(supabase, orgId)
+      return { role, ...data }
+    }
 
-  // member (default)
-  const data = await dbGetMemberDashboard(supabase, orgId, userId)
-  return { role, ...data }
+    // member (default)
+    const data = await dbGetMemberDashboard(supabase, orgId, userId)
+    return { role, ...data }
+  } catch {
+    throw new Error('Failed to load dashboard data. Please refresh the page.')
+  }
 }

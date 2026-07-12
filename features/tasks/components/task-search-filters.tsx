@@ -64,7 +64,7 @@ export function TaskSearchFilters({ projects, members, currentUserId }: Props) {
         value={searchParams.get('status') ?? ''}
         onValueChange={(v) => updateParam('status', v)}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-full sm:w-[140px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -81,7 +81,7 @@ export function TaskSearchFilters({ projects, members, currentUserId }: Props) {
         value={searchParams.get('priority') ?? ''}
         onValueChange={(v) => updateParam('priority', v)}
       >
-        <SelectTrigger className="w-[130px]">
+        <SelectTrigger className="w-full sm:w-[130px]">
           <SelectValue placeholder="Priority" />
         </SelectTrigger>
         <SelectContent>
@@ -97,7 +97,7 @@ export function TaskSearchFilters({ projects, members, currentUserId }: Props) {
         value={searchParams.get('projectId') ?? ''}
         onValueChange={(v) => updateParam('projectId', v)}
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-full sm:w-[160px]">
           <SelectValue placeholder="All Projects" />
         </SelectTrigger>
         <SelectContent>
@@ -113,7 +113,7 @@ export function TaskSearchFilters({ projects, members, currentUserId }: Props) {
           value={searchParams.get('assigneeId') ?? ''}
           onValueChange={(v) => updateParam('assigneeId', v)}
         >
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder="Assignee" />
           </SelectTrigger>
           <SelectContent>

@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { isRedirectError } from 'next/dist/client/components/redirect-error'
 import { createClient } from '@/supabase/server'
 import type { OrgRole } from '@/types/supabase'
 import { canViewReports, canViewFinancialReports, canManagePayroll } from '@/lib/permissions'
@@ -77,22 +78,30 @@ async function resolveReportContext() {
 
 // ─── Report actions ───────────────────────────────────────────────────────────
 
+function safeReportError(err: unknown, label: string): never {
+  if (isRedirectError(err)) throw err
+  throw new Error(`Failed to load ${label}. Please try again.`)
+}
+
 export async function getOverviewReportAction(params: ReportParams): Promise<OverviewReport> {
   const { supabase, orgId, role, orgCurrency } = await resolveReportContext()
   if (!canViewFinancialReports(role)) redirect('/reports?tab=projects')
-  return dbGetOverviewReport(supabase, orgId, params.from, params.to, orgCurrency)
+  try { return await dbGetOverviewReport(supabase, orgId, params.from, params.to, orgCurrency) }
+  catch (err) { safeReportError(err, 'overview report') }
 }
 
 export async function getRevenueReportAction(params: ReportParams): Promise<RevenueReport> {
   const { supabase, orgId, role } = await resolveReportContext()
   if (!canViewFinancialReports(role)) redirect('/reports?tab=projects')
-  return dbGetRevenueReport(supabase, orgId, params.from, params.to)
+  try { return await dbGetRevenueReport(supabase, orgId, params.from, params.to) }
+  catch (err) { safeReportError(err, 'revenue report') }
 }
 
 export async function getReceivablesReportAction(): Promise<ReceivablesReport> {
   const { supabase, orgId, role } = await resolveReportContext()
   if (!canViewFinancialReports(role)) redirect('/reports?tab=projects')
-  return dbGetReceivablesReport(supabase, orgId)
+  try { return await dbGetReceivablesReport(supabase, orgId) }
+  catch (err) { safeReportError(err, 'receivables report') }
 }
 
 export async function getClientRevenueReportAction(
@@ -100,37 +109,43 @@ export async function getClientRevenueReportAction(
 ): Promise<ClientRevenueReport> {
   const { supabase, orgId, role } = await resolveReportContext()
   if (!canViewFinancialReports(role)) redirect('/reports?tab=projects')
-  return dbGetClientRevenueReport(supabase, orgId, params.from, params.to)
+  try { return await dbGetClientRevenueReport(supabase, orgId, params.from, params.to) }
+  catch (err) { safeReportError(err, 'client revenue report') }
 }
 
 export async function getProjectDeliveryReportAction(
   params: ReportParams,
 ): Promise<ProjectDeliveryReport> {
   const { supabase, orgId } = await resolveReportContext()
-  return dbGetProjectDeliveryReport(supabase, orgId, params.from, params.to)
+  try { return await dbGetProjectDeliveryReport(supabase, orgId, params.from, params.to) }
+  catch (err) { safeReportError(err, 'project delivery report') }
 }
 
 export async function getTaskPerformanceReportAction(
   params: ReportParams,
 ): Promise<TaskPerformanceReport> {
   const { supabase, orgId } = await resolveReportContext()
-  return dbGetTaskPerformanceReport(supabase, orgId, params.from, params.to)
+  try { return await dbGetTaskPerformanceReport(supabase, orgId, params.from, params.to) }
+  catch (err) { safeReportError(err, 'task performance report') }
 }
 
 export async function getTeamPerformanceReportAction(
   params: ReportParams,
 ): Promise<TeamPerformanceReport> {
   const { supabase, orgId } = await resolveReportContext()
-  return dbGetTeamPerformanceReport(supabase, orgId, params.from, params.to)
+  try { return await dbGetTeamPerformanceReport(supabase, orgId, params.from, params.to) }
+  catch (err) { safeReportError(err, 'team performance report') }
 }
 
 export async function getBottlenecksReportAction(): Promise<BottlenecksReport> {
   const { supabase, orgId } = await resolveReportContext()
-  return dbGetBottlenecksReport(supabase, orgId)
+  try { return await dbGetBottlenecksReport(supabase, orgId) }
+  catch (err) { safeReportError(err, 'bottlenecks report') }
 }
 
 export async function getPayrollReportAction(): Promise<PayrollReport> {
   const { supabase, orgId, role } = await resolveReportContext()
   if (!canManagePayroll(role)) redirect('/reports?tab=projects')
-  return dbGetPayrollReport(supabase, orgId)
+  try { return await dbGetPayrollReport(supabase, orgId) }
+  catch (err) { safeReportError(err, 'payroll report') }
 }

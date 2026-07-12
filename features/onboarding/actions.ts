@@ -256,7 +256,7 @@ export async function createOrganizationAction(params: {
       data: null,
       error: isSlugTaken
         ? 'This URL slug is already taken. Please choose a different one.'
-        : `Failed to create organization: ${orgError.message}`,
+        : 'Failed to create organization. Please try again.',
       code: isSlugTaken ? 'SLUG_TAKEN' : 'CREATE_FAILED',
     }
   }
@@ -274,7 +274,7 @@ export async function createOrganizationAction(params: {
     }
     // Best-effort cleanup so the orphaned org doesn't block a retry with the same slug
     await admin.from('organizations').delete().eq('id', org.id)
-    return { data: null, error: `Failed to assign ownership: ${memberError.message}`, code: 'CREATE_FAILED' }
+    return { data: null, error: 'Failed to assign ownership. Please try again.', code: 'CREATE_FAILED' }
   }
 
   // Set the user's active organization. Non-fatal: if PostgREST's schema cache

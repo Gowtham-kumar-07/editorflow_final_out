@@ -48,19 +48,31 @@ export async function getNotificationsAction(
   filters: NotificationFilters = {}
 ): Promise<GetNotificationsResult> {
   const { orgId, supabase } = await resolveContext()
-  return dbGetNotifications(supabase, orgId, filters)
+  try {
+    return await dbGetNotifications(supabase, orgId, filters)
+  } catch {
+    return { notifications: [], total: 0, page: 1, pageSize: 20, totalPages: 0, unread_count: 0 }
+  }
 }
 
 export async function getUnreadNotificationCountAction(): Promise<number> {
   const { orgId, supabase } = await resolveContext()
-  return dbGetUnreadCount(supabase, orgId)
+  try {
+    return await dbGetUnreadCount(supabase, orgId)
+  } catch {
+    return 0
+  }
 }
 
 export async function getRecentNotificationsAction(
   limit = 10
 ): Promise<Notification[]> {
   const { orgId, supabase } = await resolveContext()
-  return dbGetRecentNotifications(supabase, orgId, limit)
+  try {
+    return await dbGetRecentNotifications(supabase, orgId, limit)
+  } catch {
+    return []
+  }
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────

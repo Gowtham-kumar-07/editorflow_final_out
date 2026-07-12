@@ -254,7 +254,7 @@ export async function uploadOrgLogoAction(
       .from('organization-logos')
       .upload(path, bytes, { contentType: file.type, upsert: true })
 
-    if (uploadErr) return { ok: false, error: uploadErr.message }
+    if (uploadErr) return { ok: false, error: 'Logo upload failed. Please try again.' }
 
     const { data: { publicUrl } } = supabase.storage
       .from('organization-logos')
@@ -266,8 +266,8 @@ export async function uploadOrgLogoAction(
     if (!updated) return { ok: false, error: 'Failed to save logo URL' }
 
     return { ok: true, data: { logo_url: updated.logo_url! } }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Upload failed' }
+  } catch {
+    return { ok: false, error: 'Logo upload failed. Please try again.' }
   }
 }
 
@@ -276,8 +276,8 @@ export async function removeOrgLogoAction(): Promise<ActionResult<null>> {
     const result = await patchOrg({ logo_url: null })
     if (!result.ok) return result
     return { ok: true, data: null }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  } catch {
+    return { ok: false, error: 'Failed to remove logo. Please try again.' }
   }
 }
 
@@ -312,7 +312,7 @@ export async function uploadOrgQrAction(
       .from('organization-logos')
       .upload(path, bytes, { contentType: file.type, upsert: true })
 
-    if (uploadErr) return { ok: false, error: uploadErr.message }
+    if (uploadErr) return { ok: false, error: 'QR upload failed. Please try again.' }
 
     const { data: { publicUrl } } = supabase.storage
       .from('organization-logos')
@@ -324,8 +324,8 @@ export async function uploadOrgQrAction(
     if (!updated) return { ok: false, error: 'Failed to save QR URL' }
 
     return { ok: true, data: { payment_qr_url: updated.payment_qr_url! } }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Upload failed' }
+  } catch {
+    return { ok: false, error: 'QR upload failed. Please try again.' }
   }
 }
 
@@ -334,7 +334,7 @@ export async function removeOrgQrAction(): Promise<ActionResult<null>> {
     const result = await patchOrg({ payment_qr_url: null })
     if (!result.ok) return result
     return { ok: true, data: null }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+  } catch {
+    return { ok: false, error: 'Failed to remove QR image. Please try again.' }
   }
 }

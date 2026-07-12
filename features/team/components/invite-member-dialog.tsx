@@ -103,7 +103,7 @@ export function InviteMemberDialog() {
                 value={`${window.location.origin}/invite/accept?token=${token}`}
                 className="font-mono text-xs"
               />
-              <Button variant="outline" size="icon" onClick={copyToken}>
+              <Button variant="outline" size="icon" onClick={copyToken} aria-label={copied ? 'Copied' : 'Copy invite link'}>
                 {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>

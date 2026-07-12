@@ -2,8 +2,10 @@
 
 import { useSearchParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/shared/empty-state'
 import { PaymentSummaryGrid } from './payment-summary-grid'
 import { PaymentSearchFilters } from './payment-search-filters'
 import { PaymentsTable } from './payments-table'
@@ -73,7 +75,11 @@ export function PaymentsListClient({ orgId, role }: PaymentsListClientProps) {
             <Skeleton key={i} className="h-36 w-full rounded-lg" />
           ))
         ) : payments.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">No payments found.</p>
+          <EmptyState
+            icon={CreditCard}
+            title="No payments found"
+            description="Adjust your filters or record a payment against an invoice."
+          />
         ) : (
           payments.map((p) => (
             <PaymentMobileCard key={p.id} payment={p} role={role} />

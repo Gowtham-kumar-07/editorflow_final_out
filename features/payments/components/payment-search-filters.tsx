@@ -92,7 +92,7 @@ export function PaymentSearchFilters() {
         value={params.get('status') ?? 'all'}
         onValueChange={(v) => push('status', v)}
       >
-        <SelectTrigger className="w-[150px]">
+        <SelectTrigger className="w-full sm:w-[150px]">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -107,7 +107,7 @@ export function PaymentSearchFilters() {
         value={params.get('method') ?? 'all'}
         onValueChange={(v) => push('method', v)}
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-full sm:w-[160px]">
           <SelectValue placeholder="Method" />
         </SelectTrigger>
         <SelectContent>
@@ -120,7 +120,7 @@ export function PaymentSearchFilters() {
       {/* Date from */}
       <Input
         type="date"
-        className="w-[145px]"
+        className="w-full sm:w-[145px]"
         value={params.get('dateFrom') ?? ''}
         onChange={(e) => push('dateFrom', e.target.value)}
       />
@@ -128,7 +128,7 @@ export function PaymentSearchFilters() {
       {/* Date to */}
       <Input
         type="date"
-        className="w-[145px]"
+        className="w-full sm:w-[145px]"
         value={params.get('dateTo') ?? ''}
         onChange={(e) => push('dateTo', e.target.value)}
       />

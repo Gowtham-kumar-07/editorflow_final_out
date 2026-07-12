@@ -26,7 +26,7 @@ export function IncomeFilterBar({ filters, onChange, members = [], canManage }: 
           value={filters.memberId ?? ''}
           onValueChange={(v) => onChange({ ...filters, memberId: v || undefined, page: 1 })}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="All members" />
           </SelectTrigger>
           <SelectContent>
@@ -44,7 +44,7 @@ export function IncomeFilterBar({ filters, onChange, members = [], canManage }: 
         value={filters.status ?? ''}
         onValueChange={(v) => onChange({ ...filters, status: (v || '') as typeof filters.status, page: 1 })}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-full sm:w-[140px]">
           <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
@@ -56,7 +56,7 @@ export function IncomeFilterBar({ filters, onChange, members = [], canManage }: 
 
       <Input
         type="date"
-        className="w-[150px]"
+        className="w-full sm:w-[150px]"
         value={filters.from ?? ''}
         onChange={(e) => onChange({ ...filters, from: e.target.value || undefined, page: 1 })}
         placeholder="From"
@@ -64,7 +64,7 @@ export function IncomeFilterBar({ filters, onChange, members = [], canManage }: 
       />
       <Input
         type="date"
-        className="w-[150px]"
+        className="w-full sm:w-[150px]"
         value={filters.to ?? ''}
         onChange={(e) => onChange({ ...filters, to: e.target.value || undefined, page: 1 })}
         placeholder="To"

@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { Users } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/shared/empty-state'
 import {
   Table,
   TableBody,
@@ -29,6 +31,16 @@ type Props = {
 
 export function TeamTable({ members, viewerRole, viewerId }: Props) {
   const canSeeEmails = viewerRole === 'owner' || viewerRole === 'admin' || viewerRole === 'project_manager'
+
+  if (members.length === 0) {
+    return (
+      <EmptyState
+        icon={Users}
+        title="No team members found"
+        description="No members match the current filter."
+      />
+    )
+  }
 
   return (
     <div className="rounded-md border overflow-x-auto">

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
   Command,
   CommandEmpty,
@@ -134,6 +134,7 @@ export function GlobalSearchDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && close()}>
       <DialogContent className="overflow-hidden p-0 sm:max-w-2xl">
+        <DialogTitle className="sr-only">Search</DialogTitle>
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search clients, projects, tasks, invoices…"

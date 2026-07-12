@@ -142,7 +142,7 @@ export function PaymentsTable({ payments, role, loading }: PaymentsTableProps) {
                         href={`/api/payments/${p.id}/receipt`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Download receipt"
+                        aria-label="Download receipt"
                       >
                         <Receipt className="h-3.5 w-3.5" />
                       </a>
@@ -155,7 +155,7 @@ export function PaymentsTable({ payments, role, loading }: PaymentsTableProps) {
                       amount={p.amount}
                       currency={p.invoice_currency}
                       trigger={
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Void payment">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" aria-label="Void payment">
                           <Ban className="h-3.5 w-3.5" />
                         </Button>
                       }

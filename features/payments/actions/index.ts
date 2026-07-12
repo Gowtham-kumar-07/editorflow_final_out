@@ -175,9 +175,8 @@ export async function recordPaymentAction(
       fx_rate_date:         date,
     })
     return { ok: true, data: result }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to record payment'
-    return { ok: false, error: msg }
+  } catch {
+    return { ok: false, error: 'Failed to record payment. Please try again.' }
   }
 }
 
@@ -199,8 +198,7 @@ export async function voidPaymentAction(
     const supabase = await createClient()
     await dbVoidPayment(supabase, paymentId, parsed.data.void_reason)
     return { ok: true, data: undefined }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Failed to void payment'
-    return { ok: false, error: msg }
+  } catch {
+    return { ok: false, error: 'Failed to void payment. Please try again.' }
   }
 }

@@ -67,6 +67,8 @@ export function RevenueOverviewChart({ data, loading = false, currency = 'USD' }
           className="w-full"
           style={{ maxHeight: 180 }}
           onMouseLeave={() => setTooltip(null)}
+          role="img"
+          aria-label="Revenue overview bar chart showing last 6 months of collected payments"
         >
           {data.map((d, i) => {
             const barHeight = (d.amount / max) * chartH

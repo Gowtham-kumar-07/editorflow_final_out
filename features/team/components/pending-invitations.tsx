@@ -57,7 +57,7 @@ export function PendingInvitations({ invitations }: Props) {
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                  title="Cancel invitation"
+                  aria-label="Cancel invitation"
                   disabled={cancel.isPending}
                   onClick={() => cancel.mutate(inv.id)}
                 >

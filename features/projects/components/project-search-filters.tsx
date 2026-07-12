@@ -102,7 +102,7 @@ export function ProjectSearchFilters({
           value={defaultStatus || '__all__'}
           onValueChange={(v) => updateParam('status', v)}
         >
-          <SelectTrigger className="h-9 w-[150px]">
+          <SelectTrigger className="h-9 w-full sm:w-[150px]">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -122,7 +122,7 @@ export function ProjectSearchFilters({
           value={defaultPriority || '__all__'}
           onValueChange={(v) => updateParam('priority', v)}
         >
-          <SelectTrigger className="h-9 w-[140px]">
+          <SelectTrigger className="h-9 w-full sm:w-[140px]">
             <SelectValue placeholder="All priorities" />
           </SelectTrigger>
           <SelectContent>
@@ -140,7 +140,7 @@ export function ProjectSearchFilters({
             value={defaultClientId || '__all__'}
             onValueChange={(v) => updateParam('client_id', v)}
           >
-            <SelectTrigger className="h-9 w-[180px]">
+            <SelectTrigger className="h-9 w-full sm:w-[180px]">
               <SelectValue placeholder="All clients" />
             </SelectTrigger>
             <SelectContent>
@@ -156,7 +156,7 @@ export function ProjectSearchFilters({
 
         {/* Sort */}
         <Select value={defaultSort} onValueChange={(v) => updateParam('sort', v)}>
-          <SelectTrigger className="h-9 w-[180px] ml-auto">
+          <SelectTrigger className="h-9 w-full sm:w-[180px] sm:ml-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
