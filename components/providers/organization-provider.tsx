@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useCallback,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -50,14 +51,7 @@ export function useOrganizationContext(): OrganizationContextValue {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 type OrganizationProviderProps = {
-  /**
-   * Active organization fetched server-side — used as initialData so React
-   * Query treats it as already-fetched and skips the client loading flash.
-   */
   initialOrg:     OrganizationWithRole
-  /**
-   * All organizations the user belongs to, fetched server-side.
-   */
   initialAllOrgs: OrganizationWithRole[]
   children: ReactNode
 }
@@ -67,25 +61,31 @@ export function OrganizationProvider({
   initialAllOrgs,
   children,
 }: OrganizationProviderProps) {
-  const queryClient   = useQueryClient()
-  const router        = useRouter()
-  const switchingRef  = useRef(false)
+  const queryClient  = useQueryClient()
+  const router       = useRouter()
+  const switchingRef = useRef(false)
   const [isSwitching, setIsSwitching] = useState(false)
 
-  // Active organization query — respects active_organization_id via getUserOrganization
-  const { data: organization, isLoading } = useQuery<OrganizationWithRole | null>({
-    queryKey: ORGANIZATION_QUERY_KEY,
-    queryFn:  async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
-      return getUserOrganization(supabase, user.id)
-    },
-    initialData: initialOrg,
-    staleTime:   5 * 60 * 1000,
-  })
+  // ── Active org as plain React state ───────────────────────────────────────
+  // NOT managed via useQuery. After queryClient.clear(), React Query destroys
+  // the existing query instance. The useQuery observer re-subscribes on the
+  // next render and initialData: initialOrg (the OLD RSC prop) wins the race
+  // before router.refresh() delivers the new one — stale name until F5.
+  // A direct setState bypasses all of that; it updates synchronously within
+  // the React tree with no query observer re-subscription needed.
+  const [organization, setOrganization] = useState<OrganizationWithRole | null>(initialOrg)
 
-  // All-orgs query — populates the org switcher list
+  // When Next.js RSC sends an updated initialOrg (after router.refresh()),
+  // keep state in sync. By the time this fires we've already applied the
+  // new org in switchOrganization, so it's a quiet confirmation pass.
+  useEffect(() => {
+    setOrganization(initialOrg)
+  }, [initialOrg])
+
+  // ── All-orgs via React Query ───────────────────────────────────────────────
+  // This list only changes when the user joins/leaves an org (not on a plain
+  // switch), so the initialData re-population after queryClient.clear() is
+  // harmless — we always want the full list restored unchanged.
   const { data: allOrganizations = [] } = useQuery<OrganizationWithRole[]>({
     queryKey: ALL_ORGANIZATIONS_QUERY_KEY,
     queryFn:  async () => {
@@ -98,10 +98,18 @@ export function OrganizationProvider({
     staleTime:   5 * 60 * 1000,
   })
 
+  // ── Refresh ────────────────────────────────────────────────────────────────
   const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ORGANIZATION_QUERY_KEY })
-  }, [queryClient])
+    const supabase = createClient()
+    void (async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const org = await getUserOrganization(supabase, user.id)
+      if (org) setOrganization(org)
+    })()
+  }, [])
 
+  // ── Switch ─────────────────────────────────────────────────────────────────
   const switchOrganization = useCallback(async (orgId: string) => {
     if (switchingRef.current) return
     switchingRef.current = true
@@ -113,25 +121,17 @@ export function OrganizationProvider({
         return
       }
 
-      // Fetch the new active org client-side NOW (DB is already updated).
-      // This MUST happen before queryClient.clear() so we can immediately
-      // re-seed the cache — preventing the stale initialData re-population
-      // bug where React Query re-initializes from the old RSC prop before
-      // the router.refresh() payload arrives.
-      const supabase     = createClient()
+      // Fetch the new active org and apply it immediately via React state.
+      // This updates the header and sidebar before the RSC refresh payload
+      // arrives — setState requires no query observer re-subscription.
+      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      const newOrg       = user ? await getUserOrganization(supabase, user.id) : null
+      const newOrg = user ? await getUserOrganization(supabase, user.id) : null
+      if (newOrg) setOrganization(newOrg)
 
-      // Snapshot allOrgs before clearing — they don't change on a plain switch
-      const savedAllOrgs = queryClient.getQueryData<OrganizationWithRole[]>(ALL_ORGANIZATIONS_QUERY_KEY)
-
-      // Wipe all org-scoped caches (dashboard, reports, tasks, invoices, …)
+      // Wipe all org-scoped caches so stale data from the old org
+      // (dashboard, reports, tasks, invoices, …) cannot leak across.
       queryClient.clear()
-
-      // Immediately re-seed org context so Header/Sidebar reflect the new
-      // org before the RSC refresh payload arrives.
-      if (newOrg)       queryClient.setQueryData(ORGANIZATION_QUERY_KEY,      newOrg)
-      if (savedAllOrgs) queryClient.setQueryData(ALL_ORGANIZATIONS_QUERY_KEY, savedAllOrgs)
 
       router.push('/dashboard')
       router.refresh()
@@ -146,9 +146,9 @@ export function OrganizationProvider({
   return (
     <OrganizationContext.Provider
       value={{
-        organization:       organization ?? null,
+        organization,
         allOrganizations,
-        isLoading,
+        isLoading: false,
         isSwitching,
         refresh,
         switchOrganization,
