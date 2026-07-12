@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganizationContext } from '@/components/providers/organization-provider'
 
 export type ShellUser = {
   id: string
@@ -23,7 +24,6 @@ export type ShellUser = {
 
 type UserMenuProps = {
   user: ShellUser
-  orgName: string
 }
 
 function getInitials(fullName: string | null, email: string): string {
@@ -38,8 +38,10 @@ function getInitials(fullName: string | null, email: string): string {
   return email[0].toUpperCase()
 }
 
-export function UserMenu({ user, orgName }: UserMenuProps) {
+export function UserMenu({ user }: UserMenuProps) {
   const { signOut, isSigningOut } = useAuth()
+  const { organization } = useOrganizationContext()
+  const orgName = organization?.name ?? ''
 
   const initials = getInitials(user.fullName, user.email)
   const displayName = user.fullName ?? user.email

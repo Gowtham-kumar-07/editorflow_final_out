@@ -20,10 +20,9 @@ export type { ShellUser }
 type DashboardShellProps = {
   children: ReactNode
   user: ShellUser
-  orgName: string
 }
 
-export function DashboardShell({ children, user, orgName }: DashboardShellProps) {
+export function DashboardShell({ children, user }: DashboardShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
@@ -52,7 +51,6 @@ export function DashboardShell({ children, user, orgName }: DashboardShellProps)
           onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
           onToggleMobileSidebar={() => setMobileSidebarOpen((o) => !o)}
           user={user}
-          orgName={orgName}
         />
         <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain">
           <PageTransition>{children}</PageTransition>

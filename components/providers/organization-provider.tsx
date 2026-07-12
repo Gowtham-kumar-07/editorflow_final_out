@@ -112,9 +112,27 @@ export function OrganizationProvider({
         toast.error(error)
         return
       }
-      // Wipe all org-scoped React Query caches so no stale data leaks
-      // across the org boundary after the switch.
+
+      // Fetch the new active org client-side NOW (DB is already updated).
+      // This MUST happen before queryClient.clear() so we can immediately
+      // re-seed the cache — preventing the stale initialData re-population
+      // bug where React Query re-initializes from the old RSC prop before
+      // the router.refresh() payload arrives.
+      const supabase     = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const newOrg       = user ? await getUserOrganization(supabase, user.id) : null
+
+      // Snapshot allOrgs before clearing — they don't change on a plain switch
+      const savedAllOrgs = queryClient.getQueryData<OrganizationWithRole[]>(ALL_ORGANIZATIONS_QUERY_KEY)
+
+      // Wipe all org-scoped caches (dashboard, reports, tasks, invoices, …)
       queryClient.clear()
+
+      // Immediately re-seed org context so Header/Sidebar reflect the new
+      // org before the RSC refresh payload arrives.
+      if (newOrg)       queryClient.setQueryData(ORGANIZATION_QUERY_KEY,      newOrg)
+      if (savedAllOrgs) queryClient.setQueryData(ALL_ORGANIZATIONS_QUERY_KEY, savedAllOrgs)
+
       router.push('/dashboard')
       router.refresh()
     } catch {

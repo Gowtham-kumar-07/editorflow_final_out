@@ -15,7 +15,6 @@ type HeaderProps = {
   onToggleSidebar: () => void
   onToggleMobileSidebar: () => void
   user: ShellUser
-  orgName: string
 }
 
 export function Header({
@@ -23,7 +22,6 @@ export function Header({
   onToggleSidebar,
   onToggleMobileSidebar,
   user,
-  orgName,
 }: HeaderProps) {
   const { resolvedTheme, toggle, mounted } = useThemeToggle()
   const { open: openSearch } = useGlobalSearch()
@@ -106,7 +104,7 @@ export function Header({
 
         <OrganizationSwitcher />
 
-        <UserMenu user={user} orgName={orgName} />
+        <UserMenu user={user} />
       </div>
     </header>
   )

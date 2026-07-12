@@ -34,7 +34,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <OrganizationProvider initialOrg={organization} initialAllOrgs={allOrganizations}>
-      <DashboardShell user={shellUser} orgName={organization.name}>
+      <DashboardShell user={shellUser}>
         {children}
       </DashboardShell>
     </OrganizationProvider>
