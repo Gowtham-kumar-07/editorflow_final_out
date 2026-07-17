@@ -143,24 +143,38 @@ export async function recordPaymentAction(
   }
 
   try {
+    console.log('[recordPayment] 1/6 createClient')
     const supabase = await createClient()
 
     // Resolve invoice currency and org base currency for FX snapshot
-    const { data: invoiceRow } = await supabase
+    const { data: invoiceRow, error: invoiceErr } = await supabase
       .from('invoices')
       .select('currency, organizations(default_currency)')
       .eq('id', invoiceId)
       .maybeSingle()
 
+    console.log('[recordPayment] 2/6 invoiceLookup', { invoiceId, invoiceErr, invoiceRow })
+
     const txCurrency   = invoiceRow?.currency ?? 'USD'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const baseCurrency = (invoiceRow?.organizations as any)?.default_currency ?? 'USD'
 
+    console.log('[recordPayment] 3/6 currencies', { txCurrency, baseCurrency })
+
     // Server fetches the live rate — never trusts browser-supplied rate
+    console.log('[recordPayment] 4/6 getFxRate request', { from: txCurrency, to: baseCurrency })
     const { rate, source, date } = await getFxRate(txCurrency, baseCurrency)
+    console.log('[recordPayment] 4/6 getFxRate response', { rate, source, date })
+
     const baseAmount = Math.round(parsed.data.amount * rate * 100) / 100
 
-    const result = await dbRecordPayment(supabase, {
+    // FIX: the DB constraint only allows 'live' | 'manual' | 'fallback_1'.
+    // getFxRate() returns 'same_currency' when txCurrency === baseCurrency,
+    // which violates the payments_fx_rate_source_check constraint and causes
+    // every same-currency payment to fail. Map it to 'fallback_1' (rate 1:1).
+    const dbFxSource = source === 'same_currency' ? 'fallback_1' : source
+
+    const payload = {
       invoice_id:           invoiceId,
       amount:               parsed.data.amount,
       payment_date:         parsed.data.payment_date,
@@ -171,11 +185,17 @@ export async function recordPaymentAction(
       base_currency:        baseCurrency,
       fx_rate:              rate,
       base_amount:          baseAmount,
-      fx_rate_source:       source,
+      fx_rate_source:       dbFxSource,
       fx_rate_date:         date,
-    })
+    }
+    console.log('[recordPayment] 5/6 dbRecordPayment payload', payload)
+
+    const result = await dbRecordPayment(supabase, payload)
+    console.log('[recordPayment] 6/6 success', result)
     return { ok: true, data: result }
-  } catch {
+  } catch (error) {
+    console.error('[recordPayment] FAILED', error)
+    if (error instanceof Error) console.error('[recordPayment] stack', error.stack)
     return { ok: false, error: 'Failed to record payment. Please try again.' }
   }
 }
