@@ -170,7 +170,9 @@ export default async function ProjectDetailPage({
                   )}
                 </DetailRow>
                 <DetailRow icon={DollarSign} label="Budget">
-                  {project.budget !== null ? formatCurrency(Number(project.budget)) : '—'}
+                  {project.budget !== null
+                    ? formatCurrency(Number(project.budget), project.currency ?? 'USD')
+                    : '—'}
                 </DetailRow>
               </div>
             </CardContent>

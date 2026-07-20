@@ -15,7 +15,8 @@
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,7 +36,8 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
-
+    <!-- Network access -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required by @capacitor/network to read connection type -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </manifest>

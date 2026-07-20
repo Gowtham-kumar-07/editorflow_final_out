@@ -27,7 +27,11 @@ export function Header({
   const { open: openSearch } = useGlobalSearch()
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-4 gap-4">
+    <header className="shrink-0 border-b bg-background">
+      {/* Pushes content below the status bar on notched / edge-to-edge devices.
+          Zero height on regular browsers where viewport-fit=cover has no effect. */}
+      <div className="safe-top" aria-hidden="true" />
+      <div className="flex h-16 items-center justify-between px-4 gap-4">
       {/* Left — sidebar controls + breadcrumb */}
       <div className="flex min-w-0 items-center gap-2">
         {/* Hamburger (mobile only) */}
@@ -106,6 +110,7 @@ export function Header({
 
         <UserMenu user={user} />
       </div>
+    </div>
     </header>
   )
 }

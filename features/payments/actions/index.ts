@@ -143,28 +143,21 @@ export async function recordPaymentAction(
   }
 
   try {
-    console.log('[recordPayment] 1/6 createClient')
     const supabase = await createClient()
 
     // Resolve invoice currency and org base currency for FX snapshot
-    const { data: invoiceRow, error: invoiceErr } = await supabase
+    const { data: invoiceRow } = await supabase
       .from('invoices')
       .select('currency, organizations(default_currency)')
       .eq('id', invoiceId)
       .maybeSingle()
 
-    console.log('[recordPayment] 2/6 invoiceLookup', { invoiceId, invoiceErr, invoiceRow })
-
     const txCurrency   = invoiceRow?.currency ?? 'USD'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const baseCurrency = (invoiceRow?.organizations as any)?.default_currency ?? 'USD'
 
-    console.log('[recordPayment] 3/6 currencies', { txCurrency, baseCurrency })
-
     // Server fetches the live rate — never trusts browser-supplied rate
-    console.log('[recordPayment] 4/6 getFxRate request', { from: txCurrency, to: baseCurrency })
     const { rate, source, date } = await getFxRate(txCurrency, baseCurrency)
-    console.log('[recordPayment] 4/6 getFxRate response', { rate, source, date })
 
     const baseAmount = Math.round(parsed.data.amount * rate * 100) / 100
 
@@ -188,10 +181,7 @@ export async function recordPaymentAction(
       fx_rate_source:       dbFxSource,
       fx_rate_date:         date,
     }
-    console.log('[recordPayment] 5/6 dbRecordPayment payload', payload)
-
     const result = await dbRecordPayment(supabase, payload)
-    console.log('[recordPayment] 6/6 success', result)
     return { ok: true, data: result }
   } catch (error) {
     console.error('[recordPayment] FAILED', error)

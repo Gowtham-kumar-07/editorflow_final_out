@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Providers } from '@/components/providers'
+import { MobileInit } from '@/components/mobile/mobile-init'
 import { APP_NAME, APP_DESCRIPTION, APP_URL } from '@/lib/constants'
 import './globals.css'
 
@@ -43,9 +44,13 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
+  // viewport-fit=cover enables edge-to-edge on notched/gesture-nav devices.
+  // Content that would be clipped by safe areas must use env(safe-area-inset-*)
+  // CSS values (see globals.css and header.tsx).
+  viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
   ],
 }
 
@@ -89,7 +94,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="flex min-h-full flex-col overflow-hidden">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          {/* MobileInit must be inside Providers to access ThemeProvider context */}
+          <MobileInit />
+        </Providers>
       </body>
     </html>
   )

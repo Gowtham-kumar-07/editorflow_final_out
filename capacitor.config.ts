@@ -1,15 +1,3 @@
-import type { CapacitorConfig } from '@capacitor/cli';
-
-const config: CapacitorConfig = {
-  appId: 'com.editorflow.app',
-  appName: 'EditorFlow',
-
-  webDir: 'public',
-
-  server: {
-    url: 'https://editorflow-final-out.vercel.app',
-    cleartext: false,
-  },
-};
-
-export default config;
+// Capacitor has been removed. EditorFlow Android is now a native WebView shell.
+// See android/app/src/main/java/com/editorflow/app/MainActivity.java.
+export {}

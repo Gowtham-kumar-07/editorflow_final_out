@@ -1,17 +1,18 @@
 {
-  "name": "editorflow-temp",
-  "version": "0.1.0",
+  "name": "editorflow",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:types": "node scripts/gen-types.mjs"
+    "db:types": "node scripts/gen-types.mjs",
+    "android:debug": "cd android && gradlew assembleDebug",
+    "android:release": "cd android && gradlew bundleRelease",
+    "android:install": "cd android && gradlew assembleDebug && adb install -r app/build/outputs/apk/debug/app-debug.apk"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.1",
-    "@capacitor/core": "^8.4.1",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-alert-dialog": "^1.1.17",
     "@radix-ui/react-avatar": "^1.2.0",
@@ -42,13 +43,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.1",
     "@tailwindcss/postcss": "^4",
     "@tanstack/react-query-devtools": "^5.101.1",
     "@types/node": "^20.19.43",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "prettier": "^3.8.4",

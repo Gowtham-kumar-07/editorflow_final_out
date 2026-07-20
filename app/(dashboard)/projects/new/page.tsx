@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getClientOptions } from '@/features/clients/actions'
 import { getUserRole } from '@/features/projects/actions'
+import { getOrgDefaultsAction } from '@/features/settings/actions'
 import { PageContainer } from '@/components/layout'
 import { ProjectForm } from '@/features/projects/components/project-form'
 import { canCreateProject } from '@/lib/permissions'
@@ -25,7 +26,11 @@ export default async function NewProjectPage({
     ? params.client_id[0]
     : (params.client_id ?? undefined)
 
-  const [clientOptions, userRole] = await Promise.all([getClientOptions(), getUserRole()])
+  const [clientOptions, userRole, orgDefaults] = await Promise.all([
+    getClientOptions(),
+    getUserRole(),
+    getOrgDefaultsAction(),
+  ])
   if (!canCreateProject(userRole ?? 'member')) redirect('/projects')
 
   return (
@@ -49,6 +54,7 @@ export default async function NewProjectPage({
         mode="create"
         clients={clientOptions}
         defaultClientId={defaultClientId}
+        defaultCurrency={orgDefaults?.default_currency ?? 'USD'}
       />
     </PageContainer>
   )

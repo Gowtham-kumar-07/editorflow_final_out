@@ -275,7 +275,9 @@ export function ProjectsTable({
                   <DueDateCell date={project.due_date} />
                 </TableCell>
                 <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
-                  {project.budget !== null ? formatCurrency(Number(project.budget)) : '—'}
+                  {project.budget !== null
+                    ? formatCurrency(Number(project.budget), project.currency ?? 'USD')
+                    : '—'}
                 </TableCell>
                 <TableCell data-no-navigate>
                   <DropdownMenu>

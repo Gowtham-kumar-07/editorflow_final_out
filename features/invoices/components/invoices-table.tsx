@@ -27,7 +27,7 @@ export function InvoicesTable({ invoices }: Props) {
       {/* ── Desktop table ───────────────────────────────────────────────── */}
       <div className="hidden md:block overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b bg-muted/40">
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Invoice #</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Client</th>

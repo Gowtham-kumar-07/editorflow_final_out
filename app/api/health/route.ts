@@ -36,7 +36,7 @@ export async function GET() {
     return NextResponse.json({
       status:      'healthy',
       database:    'ok',
-      version:     process.env.npm_package_version ?? '0.1.0',
+      version:     process.env.APP_VERSION ?? '1.0.0',
       timestamp:   new Date().toISOString(),
       latency_ms:  Date.now() - start,
     })

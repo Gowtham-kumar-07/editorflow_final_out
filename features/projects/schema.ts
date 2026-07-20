@@ -23,6 +23,7 @@ export const projectFormSchema = z
         (v) => !v || (!isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 999_999_999),
         'Enter a valid budget amount (0–999,999,999)'
       ),
+    currency: z.string().min(3).max(3),
     progress: z.number().int().min(0).max(100),
     project_files_url: z
       .string()
@@ -64,6 +65,7 @@ export function projectToFormValues(project: Project): ProjectFormValues {
     start_date:        project.start_date ?? '',
     due_date:          project.due_date ?? '',
     budget:            project.budget !== null ? String(project.budget) : '',
+    currency:          project.currency ?? 'USD',
     progress:          project.progress,
     project_files_url: project.project_files_url ?? '',
   }
@@ -81,6 +83,7 @@ export function formValuesToProjectData(values: ProjectFormValues) {
     start_date:        values.start_date || null,
     due_date:          values.due_date || null,
     budget:            values.budget ? Number(values.budget) : null,
+    currency:          values.currency,
     progress:          values.progress,
     project_files_url: url || null,
   }

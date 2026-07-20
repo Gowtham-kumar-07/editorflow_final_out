@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -19,6 +18,16 @@ import {
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 import { createTaskAction, updateTaskAction } from '../actions'
 import { taskFormSchema, taskToFormValues, TASK_FORM_DEFAULTS, type TaskFormValues } from '../schema'
@@ -35,8 +44,9 @@ type TaskFormProps =
 
 export function TaskForm(props: TaskFormProps) {
   const router = useRouter()
-  const [serverError, setServerError]   = useState<string | null>(null)
+  const [serverError,  setServerError]  = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showDiscard,  setShowDiscard]  = useState(false)
   const canEditAmount = props.canEditAmount ?? false
 
   const defaultValues: TaskFormValues =
@@ -301,8 +311,14 @@ export function TaskForm(props: TaskFormProps) {
 
         {/* ── Actions ────────────────────────────────────────────── */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Button type="button" variant="outline" asChild>
-            <Link href={cancelHref}>Cancel</Link>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (isDirty) { setShowDiscard(true) } else { router.push(cancelHref) }
+            }}
+          >
+            Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -312,6 +328,21 @@ export function TaskForm(props: TaskFormProps) {
           </Button>
         </div>
       </form>
+
+      <AlertDialog open={showDiscard} onOpenChange={setShowDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. They will be lost if you leave this page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push(cancelHref)}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Form>
   )
 }

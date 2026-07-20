@@ -1,0 +1,21 @@
+# EditorFlow release keystore configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Generate a keystore (run once, keep the .jks file in a safe place):
+#
+#    keytool -genkey -v \
+#      -keystore editorflow-release.jks \
+#      -alias editorflow \
+#      -keyalg RSA \
+#      -keysize 2048 \
+#      -validity 10000
+#
+# 2. Copy this file to android/key.properties and fill in your values.
+#    key.properties is in .gitignore — never commit it.
+#
+# 3. Place the .jks file at the path specified by storeFile below.
+#    Recommended: one directory above android/ so it is outside the repo.
+
+storeFile=../editorflow-release.jks
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=editorflow
+keyPassword=YOUR_KEY_PASSWORD

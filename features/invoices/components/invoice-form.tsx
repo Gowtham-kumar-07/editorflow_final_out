@@ -18,6 +18,16 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 import { invoiceFormSchema, defaultInvoiceValues, type InvoiceFormValues } from '../schema'
 import { InvoiceLineItems }      from './invoice-line-items'
@@ -79,10 +89,11 @@ type Props =
 
 export function InvoiceForm(props: Props) {
   const router      = useRouter()
-  const [serverError, setServerError] = useState<string | null>(null)
-  const [submitting,  setSubmitting]  = useState(false)
-  const [projectOptions,   setProjectOptions]   = useState<ProjectOption[]>([])
-  const [loadingProjects,  setLoadingProjects]  = useState(false)
+  const [serverError,    setServerError]    = useState<string | null>(null)
+  const [submitting,     setSubmitting]     = useState(false)
+  const [showDiscard,    setShowDiscard]    = useState(false)
+  const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([])
+  const [loadingProjects, setLoadingProjects] = useState(false)
 
   const form = useForm<InvoiceFormValues>({
     resolver:      zodResolver(invoiceFormSchema),
@@ -94,9 +105,17 @@ export function InvoiceForm(props: Props) {
         }),
   })
 
+  const { isDirty } = form.formState
   const watchedClientId = useWatch({ control: form.control, name: 'client_id' })
   const watchedValues   = useWatch({ control: form.control })
   const { subtotal, discountAmount, taxAmount, total } = computeFinancials(watchedValues as InvoiceFormValues)
+
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
 
   // Fetch project options when client changes
   useEffect(() => {
@@ -497,8 +516,10 @@ export function InvoiceForm(props: Props) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.back()}
               disabled={submitting}
+              onClick={() => {
+                if (isDirty) { setShowDiscard(true) } else { router.back() }
+              }}
             >
               Cancel
             </Button>
@@ -506,6 +527,21 @@ export function InvoiceForm(props: Props) {
 
         </form>
       </Form>
+
+      <AlertDialog open={showDiscard} onOpenChange={setShowDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. They will be lost if you leave this page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.back()}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FormProvider>
   )
 }

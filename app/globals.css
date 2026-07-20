@@ -151,6 +151,41 @@
   to   { opacity: 1; transform: translateY(0);   }
 }
 
+/* ─── Mobile / safe-area utilities ───────────────────────────────────────── */
+
+@layer base {
+  /*
+   * Remove the blue tap highlight and 300 ms delay on all interactive elements.
+   * touch-action: manipulation disables double-tap-to-zoom, which eliminates
+   * the intentional 300 ms click delay browsers add for tap-gesture detection.
+   */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+  }
+}
+
+/*
+ * Safe-area utility classes.
+ * These are only non-zero when viewport-fit=cover is active (native mobile
+ * with a notch or gesture-navigation bar).  On the web they fall back to 0.
+ *
+ * Usage: add safe-top to the header wrapper, safe-bottom to the main
+ * scrollable area.  See components/layout/header.tsx and DashboardShell.tsx.
+ */
+.safe-top    { height: env(safe-area-inset-top,    0px); }
+.safe-bottom { height: env(safe-area-inset-bottom, 0px); }
+.safe-left   { width:  env(safe-area-inset-left,   0px); }
+.safe-right  { width:  env(safe-area-inset-right,  0px); }
+
 /* ─── Utility classes ─────────────────────────────────────────────────────── */
 
 .skeleton-shimmer {

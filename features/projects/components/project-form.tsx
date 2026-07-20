@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
-import Link from 'next/link'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -29,7 +28,18 @@ import {
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
+import { SUPPORTED_CURRENCIES } from '@/lib/currencies'
 import { createProjectAction, updateProjectAction } from '../actions'
 import {
   projectFormSchema,
@@ -39,18 +49,31 @@ import {
 import type { ClientOption } from '@/types/client'
 import type { ProjectWithClient } from '@/types/project'
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Extract the currency symbol for a given ISO code using the platform's locale data. */
+function getCurrencySymbol(code: string): string {
+  const parts = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: code,
+    maximumFractionDigits: 0,
+  }).formatToParts(0)
+  return parts.find((p) => p.type === 'currency')?.value ?? code
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type ProjectFormProps =
-  | { mode: 'create'; clients: ClientOption[]; defaultClientId?: string }
-  | { mode: 'edit'; project: ProjectWithClient; clients: ClientOption[] }
+  | { mode: 'create'; clients: ClientOption[]; defaultClientId?: string; defaultCurrency?: string }
+  | { mode: 'edit';   project: ProjectWithClient; clients: ClientOption[] }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ProjectForm(props: ProjectFormProps) {
   const router = useRouter()
-  const [serverError, setServerError]   = useState<string | null>(null)
+  const [serverError,  setServerError]  = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showDiscard,  setShowDiscard]  = useState(false)
 
   const defaultValues: ProjectFormValues =
     props.mode === 'edit'
@@ -64,6 +87,7 @@ export function ProjectForm(props: ProjectFormProps) {
           start_date:        '',
           due_date:          '',
           budget:            '',
+          currency:          props.defaultCurrency ?? 'USD',
           progress:          0,
           project_files_url: '',
         }
@@ -73,7 +97,9 @@ export function ProjectForm(props: ProjectFormProps) {
     defaultValues,
   })
 
-  const progressValue = form.watch('progress')
+  const progressValue  = form.watch('progress')
+  const currencyCode   = form.watch('currency')
+  const currencySymbol = getCurrencySymbol(currencyCode)
   const { isDirty } = form.formState
 
   useEffect(() => {
@@ -320,6 +346,7 @@ export function ProjectForm(props: ProjectFormProps) {
             Budget &amp; Progress
           </h2>
 
+          {/* Budget amount + currency side by side */}
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
@@ -329,8 +356,8 @@ export function ProjectForm(props: ProjectFormProps) {
                   <FormLabel>Budget</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        $
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none">
+                        {currencySymbol}
                       </span>
                       <Input
                         type="number"
@@ -349,34 +376,65 @@ export function ProjectForm(props: ProjectFormProps) {
 
             <FormField
               control={form.control}
-              name="progress"
+              name="currency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Progress — {progressValue}%</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      className="h-9 cursor-pointer"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                      value={field.value}
-                    />
-                  </FormControl>
-                  <FormDescription>Drag to set current progress</FormDescription>
+                  <FormLabel>Currency</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {SUPPORTED_CURRENCIES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="progress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Progress — {progressValue}%</FormLabel>
+                <FormControl>
+                  <Input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    className="h-9 cursor-pointer"
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    value={field.value}
+                  />
+                </FormControl>
+                <FormDescription>Drag to set current progress</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </section>
 
         {/* ── Actions ───────────────────────────────────────────── */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Button type="button" variant="outline" asChild>
-            <Link href={cancelHref}>Cancel</Link>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (isDirty) { setShowDiscard(true) } else { router.push(cancelHref) }
+            }}
+          >
+            Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -390,6 +448,21 @@ export function ProjectForm(props: ProjectFormProps) {
           </Button>
         </div>
       </form>
+
+      <AlertDialog open={showDiscard} onOpenChange={setShowDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. They will be lost if you leave this page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push(cancelHref)}>Discard</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Form>
   )
 }
