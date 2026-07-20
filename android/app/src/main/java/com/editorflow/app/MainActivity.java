@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.URLUtil;
@@ -43,8 +44,12 @@ import androidx.core.view.WindowInsetsControllerCompat;
  */
 public class MainActivity extends AppCompatActivity {
 
-    private static final String APP_HOST        = "editorflow-final-out.vercel.app";
-    private static final String APP_URL         = "https://editorflow-final-out.vercel.app";
+    // Primary host — the canonical URL the app always loads directly.
+    private static final String APP_HOST        = "editorflow.vercel.app";
+    private static final String APP_URL         = "https://editorflow.vercel.app";
+    // Legacy host kept as internal so any cached redirect or deep link never opens Chrome.
+    private static final String LEGACY_HOST     = "editorflow-final-out.vercel.app";
+    private static final String TAG             = "EF_NAV";
     // Safety valve: dismiss the splash after 15 s even if MobileInit never fires
     private static final int    SPLASH_TIMEOUT  = 15_000;
 
@@ -190,7 +195,24 @@ public class MainActivity extends AppCompatActivity {
 
     // ── URL routing ───────────────────────────────────────────────────────────
 
+    /** Returns true for both the canonical host and the legacy redirect source. */
+    private boolean isAppHost(String host) {
+        return APP_HOST.equalsIgnoreCase(host) || LEGACY_HOST.equalsIgnoreCase(host);
+    }
+
     private class AppWebViewClient extends WebViewClient {
+
+        @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            Log.d(TAG, "PAGE_STARTED  url=" + url);
+            super.onPageStarted(view, url, favicon);
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            Log.d(TAG, "PAGE_FINISHED url=" + url);
+            super.onPageFinished(view, url);
+        }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -198,23 +220,27 @@ public class MainActivity extends AppCompatActivity {
             String host   = url.getHost();
             String scheme = url.getScheme();
 
-            // Same-origin: stay in the WebView, never open Chrome
-            if (APP_HOST.equalsIgnoreCase(host) && "https".equalsIgnoreCase(scheme)) {
+            // Both the canonical host and the legacy redirect origin stay in the WebView
+            if (isAppHost(host) && "https".equalsIgnoreCase(scheme)) {
+                Log.d(TAG, "INTERNAL      url=" + url);
                 return false;
             }
 
             // Deep-link schemes: hand off to the appropriate system app
             if ("mailto".equals(scheme) || "tel".equals(scheme) || "sms".equals(scheme)) {
+                Log.d(TAG, "EXTERNAL_DEEP url=" + url);
                 openExternal(url);
                 return true;
             }
 
             // External http(s): open in the system browser
             if ("http".equals(scheme) || "https".equals(scheme)) {
+                Log.d(TAG, "EXTERNAL_WEB  url=" + url);
                 openExternal(url);
                 return true;
             }
 
+            Log.d(TAG, "BLOCKED       url=" + url);
             return true; // block intent:// and any other unusual schemes
         }
     }
@@ -238,9 +264,11 @@ public class MainActivity extends AppCompatActivity {
                     Uri    target = req.getUrl();
                     String host   = target.getHost();
                     String scheme = target.getScheme();
-                    if (APP_HOST.equalsIgnoreCase(host) && "https".equalsIgnoreCase(scheme)) {
+                    if (isAppHost(host) && "https".equalsIgnoreCase(scheme)) {
+                        Log.d(TAG, "WINDOW_INTERNAL url=" + target);
                         view.loadUrl(target.toString()); // keep in main WebView
                     } else {
+                        Log.d(TAG, "WINDOW_EXTERNAL url=" + target);
                         openExternal(target);            // open in system browser
                     }
                     return true;

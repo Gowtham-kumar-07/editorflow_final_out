@@ -36,8 +36,6 @@
         </provider>
     </application>
 
-    <!-- Network access -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Required by @capacitor/network to read connection type -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </manifest>

@@ -47,7 +47,8 @@ android {
         }
         debug {
             minifyEnabled false
-            applicationIdSuffix ".debug"
+            // No applicationIdSuffix — debug and release share com.editorflow.app
+            // so installing the debug APK always replaces any previously installed version.
         }
     }
 }
