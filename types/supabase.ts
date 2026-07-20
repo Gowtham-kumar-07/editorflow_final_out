@@ -760,6 +760,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          date_format: string
           default_currency: string
           default_payment_terms_days: number | null
           default_payroll_currency: string
@@ -773,11 +774,16 @@ export type Database = {
           name: string
           owner_id: string
           payment_qr_url: string | null
+          plan: string
           postal_code: string | null
           slug: string
           state: string | null
+          stripe_customer_id: string | null
+          subscription_status: string
           tagline: string | null
           tax_id: string | null
+          timezone: string
+          trial_ends_at: string | null
           updated_at: string
           upi_id: string | null
           website: string | null
@@ -796,6 +802,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          date_format?: string
           default_currency?: string
           default_payment_terms_days?: number | null
           default_payroll_currency?: string
@@ -809,11 +816,16 @@ export type Database = {
           name: string
           owner_id: string
           payment_qr_url?: string | null
+          plan?: string
           postal_code?: string | null
           slug: string
           state?: string | null
+          stripe_customer_id?: string | null
+          subscription_status?: string
           tagline?: string | null
           tax_id?: string | null
+          timezone?: string
+          trial_ends_at?: string | null
           updated_at?: string
           upi_id?: string | null
           website?: string | null
@@ -832,6 +844,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          date_format?: string
           default_currency?: string
           default_payment_terms_days?: number | null
           default_payroll_currency?: string
@@ -845,11 +858,16 @@ export type Database = {
           name?: string
           owner_id?: string
           payment_qr_url?: string | null
+          plan?: string
           postal_code?: string | null
           slug?: string
           state?: string | null
+          stripe_customer_id?: string | null
+          subscription_status?: string
           tagline?: string | null
           tax_id?: string | null
+          timezone?: string
+          trial_ends_at?: string | null
           updated_at?: string
           upi_id?: string | null
           website?: string | null
@@ -1387,6 +1405,18 @@ export type Database = {
           p_type: string
         }
         Returns: undefined
+      }
+      create_org_self_service: {
+        Args: {
+          p_date_format?: string
+          p_default_currency?: string
+          p_logo_url?: string
+          p_name: string
+          p_payroll_currency?: string
+          p_slug: string
+          p_timezone?: string
+        }
+        Returns: Json
       }
       create_organization: {
         Args: { p_logo_url?: string; p_name: string; p_slug: string }

@@ -20,10 +20,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     getAllUserOrganizations(supabase, user.id),
     supabase.from('profiles').select('full_name, avatar_url').eq('id', user.id).maybeSingle(),
   ])
-  // proxy.ts is the single source of truth for org-based routing.
-  // If we somehow reach here without an org the proxy failed — throw so
-  // Next.js shows an error boundary instead of creating a redirect loop.
-  if (!organization) throw new Error('Organization not found. Please refresh or contact support.')
+  // middleware.ts (proxy.ts) guards org membership before reaching this layout.
+  // If no org is found here it means the user genuinely has none — send them
+  // to onboarding rather than crashing with an unhandled error.
+  if (!organization) redirect('/onboarding')
 
   const shellUser = {
     id:        user.id,

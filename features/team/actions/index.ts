@@ -2,11 +2,13 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import type { GetTeamResult } from '../types'
 import type { InviteFormValues } from '../schema'
 import { logger } from '@/lib/logger'
+import { APP_URL } from '@/lib/constants'
 import {
   fetchTeam,
   updateMemberRoleService,
@@ -23,6 +25,30 @@ type OrgRole     = Database['public']['Enums']['org_role']
 export type ActionResult<T> =
   | { ok: true;  data: T }
   | { ok: false; error: string }
+
+function makeAdminClient() {
+  return createAdminClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  )
+}
+
+// Sends the Supabase invite email.  The link routes through /auth/callback so
+// the PKCE code exchange happens before landing on the invite accept page.
+async function dispatchInviteEmail(email: string, token: string): Promise<boolean> {
+  const next = encodeURIComponent(`/invite/accept?token=${token}`)
+  const redirectTo = `${APP_URL}/auth/callback?next=${next}`
+  const admin = makeAdminClient()
+  const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo })
+  if (error) {
+    // "User already registered" is expected for existing Supabase users.
+    // All other errors are genuine delivery failures.
+    logger.warn('dispatchInviteEmail: inviteUserByEmail failed', { email, message: error.message })
+    return false
+  }
+  return true
+}
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 
@@ -83,14 +109,43 @@ function toActionError(err: unknown, action?: string): ActionResult<never> {
 
 export async function inviteMemberAction(
   values: InviteFormValues
-): Promise<ActionResult<{ token: string; invitation_id: string }>> {
+): Promise<ActionResult<{ token: string; invitation_id: string; email_sent: boolean }>> {
   const supabase = await createClient()
   const { orgId } = await resolveContext(supabase)
   try {
     const result = await createInvitationService(supabase, orgId, values)
-    return { ok: true, data: result }
+    const email_sent = await dispatchInviteEmail(values.email, result.token)
+    return { ok: true, data: { ...result, email_sent } }
   } catch (err) {
     return toActionError(err, 'inviteMember')
+  }
+}
+
+export async function resendInvitationAction(
+  invitationId: string
+): Promise<ActionResult<{ email_sent: boolean }>> {
+  const supabase = await createClient()
+  const { orgId } = await resolveContext(supabase)
+  try {
+    // Fetch the invitation with its token — this is safe because it's server-only.
+    // The security boundary is the org membership check in resolveContext above.
+    const { data: inv, error: fetchErr } = await supabase
+      .from('invitations')
+      .select('email, token, expires_at, accepted_at')
+      .eq('id', invitationId)
+      .eq('organization_id', orgId)
+      .maybeSingle()
+
+    if (fetchErr || !inv) return { ok: false, error: 'Invitation not found.' }
+    if (inv.accepted_at) return { ok: false, error: 'This invitation has already been accepted.' }
+    if (new Date(inv.expires_at) < new Date()) {
+      return { ok: false, error: 'This invitation has expired. Please create a new one.' }
+    }
+
+    const email_sent = await dispatchInviteEmail(inv.email, inv.token as string)
+    return { ok: true, data: { email_sent } }
+  } catch (err) {
+    return toActionError(err, 'resendInvitation')
   }
 }
 

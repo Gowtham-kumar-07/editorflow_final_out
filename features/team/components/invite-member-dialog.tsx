@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Copy, Check, UserPlus } from 'lucide-react'
+import { Copy, Check, UserPlus, Mail, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useInviteMember } from '../hooks/use-team'
 import { inviteSchema, type InviteFormValues } from '../schema'
 import { ROLE_LABELS, SPECIALIZATION_LABELS } from '../types'
@@ -39,11 +40,17 @@ import type { TeamSpecialization } from '../types'
 const INVITABLE_ROLES = ['admin', 'project_manager', 'member'] as const
 const SPECIALIZATIONS: TeamSpecialization[] = ['editor', 'designer', 'photographer', 'videographer', 'other']
 
+type ResultState = {
+  token:      string
+  email:      string
+  email_sent: boolean
+}
+
 export function InviteMemberDialog() {
-  const [open, setOpen]       = useState(false)
-  const [token, setToken]     = useState<string | null>(null)
-  const [copied, setCopied]   = useState(false)
-  const mutation              = useInviteMember()
+  const [open, setOpen]     = useState(false)
+  const [result, setResult] = useState<ResultState | null>(null)
+  const [copied, setCopied] = useState(false)
+  const mutation            = useInviteMember()
 
   const form = useForm<InviteFormValues>({
     resolver:      zodResolver(inviteSchema),
@@ -52,26 +59,28 @@ export function InviteMemberDialog() {
 
   function handleClose() {
     setOpen(false)
-    setToken(null)
+    setResult(null)
     form.reset()
   }
 
   async function onSubmit(values: InviteFormValues) {
-    const result = await mutation.mutateAsync(values)
-    if (!result.ok) {
-      toast.error(result.error)
+    const res = await mutation.mutateAsync(values)
+    if (!res.ok) {
+      toast.error(res.error)
       return
     }
-    setToken(result.data.token)
+    setResult({ token: res.data.token, email: values.email, email_sent: res.data.email_sent })
   }
 
-  function copyToken() {
-    if (!token) return
-    const link = `${window.location.origin}/invite/accept?token=${token}`
+  function copyLink() {
+    if (!result) return
+    const link = `${window.location.origin}/invite/accept?token=${result.token}`
     void navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const inviteLink = result ? `${window.location.origin}/invite/accept?token=${result.token}` : ''
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true) }}>
@@ -86,30 +95,70 @@ export function InviteMemberDialog() {
         <DialogHeader>
           <DialogTitle>Invite team member</DialogTitle>
           <DialogDescription>
-            Send an invitation link to a new member.
+            {result
+              ? result.email_sent
+                ? 'Invitation sent successfully.'
+                : 'Invitation created — share the link below.'
+              : 'Send an invitation to a new team member.'}
           </DialogDescription>
         </DialogHeader>
 
-        {token ? (
-          /* Step 2: show the invite link */
+        {result ? (
+          /* ── Result pane ──────────────────────────────────────────────── */
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Copy this link and share it with the invited person. It expires in 7 days
-              and can only be accepted by the invited email address.
-            </p>
-            <div className="flex items-center gap-2">
-              <Input
-                readOnly
-                value={`${window.location.origin}/invite/accept?token=${token}`}
-                className="font-mono text-xs"
-              />
-              <Button variant="outline" size="icon" onClick={copyToken} aria-label={copied ? 'Copied' : 'Copy invite link'}>
-                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
+            {result.email_sent ? (
+              /* Email sent ✓ */
+              <div className="flex flex-col items-center gap-3 py-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                  <Mail className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-sm">Invitation email sent</p>
+                  <p className="text-xs text-muted-foreground">
+                    We sent an invitation to <strong>{result.email}</strong>.
+                    The link expires in 7 days and can only be accepted by that address.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Email delivery failed — show link fallback */
+              <>
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Email delivery failed for <strong>{result.email}</strong> — this address may
+                    already have a Supabase account. Share the link below directly.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={inviteLink}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={copyLink}
+                    aria-label={copied ? 'Copied' : 'Copy invite link'}
+                  >
+                    {copied
+                      ? <Check className="h-4 w-4 text-emerald-600" />
+                      : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The link expires in 7 days and can only be accepted by <strong>{result.email}</strong>.
+                </p>
+              </>
+            )}
+
+            <DialogFooter>
+              <Button onClick={handleClose}>Done</Button>
+            </DialogFooter>
           </div>
         ) : (
-          /* Step 1: invitation form */
+          /* ── Invite form ──────────────────────────────────────────────── */
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
               <FormField
@@ -119,7 +168,7 @@ export function InviteMemberDialog() {
                   <FormItem>
                     <FormLabel>Email address</FormLabel>
                     <FormControl>
-                      <Input placeholder="colleague@example.com" {...field} />
+                      <Input placeholder="colleague@example.com" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -156,7 +205,10 @@ export function InviteMemberDialog() {
                 name="specialization"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Specialization <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormLabel>
+                      Specialization{' '}
+                      <span className="text-muted-foreground">(optional)</span>
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? ''}>
                       <FormControl>
                         <SelectTrigger>
@@ -181,17 +233,11 @@ export function InviteMemberDialog() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? 'Creating…' : 'Create invitation'}
+                  {mutation.isPending ? 'Sending…' : 'Send invitation'}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
-        )}
-
-        {token && (
-          <DialogFooter>
-            <Button onClick={handleClose}>Done</Button>
-          </DialogFooter>
         )}
       </DialogContent>
     </Dialog>

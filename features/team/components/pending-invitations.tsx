@@ -1,11 +1,11 @@
 'use client'
 
-import { ChevronDown, ChevronUp, Mail, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Mail, X, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { RoleBadge } from './role-badge'
-import { useCancelInvitation } from '../hooks/use-team'
+import { useCancelInvitation, useResendInvitation } from '../hooks/use-team'
 import type { TeamInvitation, OrgRole } from '../types'
 
 function formatExpiry(expiresAt: string): string {
@@ -21,6 +21,7 @@ type Props = { invitations: TeamInvitation[] }
 export function PendingInvitations({ invitations }: Props) {
   const [open, setOpen] = useState(false)
   const cancel = useCancelInvitation()
+  const resend = useResendInvitation()
 
   const pending = invitations.filter((i) => !i.accepted_at && new Date(i.expires_at) > new Date())
   if (pending.length === 0) return null
@@ -42,17 +43,24 @@ export function PendingInvitations({ invitations }: Props) {
 
       {open && (
         <div className="border-t divide-y">
-          <p className="px-4 py-2 text-xs text-muted-foreground">
-            Share these links manually — no email is sent automatically.
-          </p>
           {pending.map((inv) => (
             <div key={inv.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm">{inv.email}</p>
                 <p className="text-xs text-muted-foreground">{formatExpiry(inv.expires_at)}</p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 <RoleBadge role={inv.role as OrgRole} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  aria-label="Resend invitation email"
+                  disabled={resend.isPending}
+                  onClick={() => resend.mutate(inv.id)}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

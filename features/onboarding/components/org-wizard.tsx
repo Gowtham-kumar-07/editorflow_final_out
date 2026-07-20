@@ -473,8 +473,10 @@ export function OrgWizard() {
       try { localStorage.setItem('editorflow_show_welcome', '1') } catch {}
 
       toast.success(`${step1.name} is ready! Welcome to EditorFlow.`)
+      // revalidatePath('/', 'layout') already ran in the server action so the
+      // router cache is fresh.  A separate router.refresh() would race with
+      // this push and cancel the navigation — omit it.
       router.push('/dashboard')
-      router.refresh()
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {

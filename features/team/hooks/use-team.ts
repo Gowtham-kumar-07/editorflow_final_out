@@ -11,6 +11,7 @@ import {
   deactivateMemberAction,
   reactivateMemberAction,
   cancelInvitationAction,
+  resendInvitationAction,
 } from '../actions'
 import type { InviteFormValues } from '../schema'
 import type { OrgRole } from '../types'
@@ -108,6 +109,23 @@ export function useCancelInvitation() {
       if (result.ok) {
         toast.success('Invitation cancelled')
         void queryClient.invalidateQueries({ queryKey: teamKeys.members() })
+      } else {
+        toast.error(result.error)
+      }
+    },
+  })
+}
+
+export function useResendInvitation() {
+  return useMutation({
+    mutationFn: (invitationId: string) => resendInvitationAction(invitationId),
+    onSuccess: (result) => {
+      if (result.ok) {
+        if (result.data.email_sent) {
+          toast.success('Invitation email resent')
+        } else {
+          toast.info('Could not resend email — the invite link is still valid and can be shared manually')
+        }
       } else {
         toast.error(result.error)
       }

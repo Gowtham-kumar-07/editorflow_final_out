@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
@@ -173,12 +174,9 @@ export async function createOrgSelfServiceAction(params: {
     logger.info(`${ACTION} step=update_profile ok`)
   }
 
-  // ── Step 6: Patch Sprint 17 columns (timezone / date_format / billing) ──
-  // These columns require migration 20260901_self_onboarding.sql. If the
-  // migration has not been applied yet, PostgREST returns PGRST204 and we
-  // log a warning but continue — the org is already created with defaults.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: patchError } = await (admin.from('organizations') as any)
+  // ── Step 6: Set timezone / date_format / billing defaults ──────────────
+  const { error: patchError } = await admin
+    .from('organizations')
     .update({
       timezone:            params.timezone,
       date_format:         params.dateFormat,
@@ -189,17 +187,21 @@ export async function createOrgSelfServiceAction(params: {
     .eq('id', org.id)
 
   if (patchError) {
-    logger.warn(`${ACTION} step=patch_sprint17_columns SKIPPED — apply migration 20260901_self_onboarding.sql`, {
-      operation: 'organizations.update(sprint17)',
+    logger.warn(`${ACTION} step=patch_org_defaults FAILED`, {
+      operation: 'organizations.update',
       code:    patchError.code,
       message: patchError.message,
     })
   } else {
-    logger.info(`${ACTION} step=patch_sprint17_columns ok`)
+    logger.info(`${ACTION} step=patch_org_defaults ok`)
   }
 
   // ── Step 7: Notification preferences are event-driven — no init row required
   logger.info(`${ACTION} step=init_notifications ok`)
+
+  // Invalidate the full layout tree so router.push('/dashboard') sees fresh
+  // org data immediately without requiring a separate router.refresh() call.
+  revalidatePath('/', 'layout')
 
   logger.info(`${ACTION} COMMIT SUCCESS`, { orgId: org.id, slug: resolvedSlug })
   return { data: org as Organization, error: null }
@@ -277,13 +279,12 @@ export async function createOrganizationAction(params: {
     return { data: null, error: 'Failed to assign ownership. Please try again.', code: 'CREATE_FAILED' }
   }
 
-  // Set the user's active organization. Non-fatal: if PostgREST's schema cache
-  // is stale (e.g. after an ALTER TABLE before a cache reload), the column
-  // update is silently skipped. resolveOrgId() falls back to organization_memberships.
+  // Set the user's active organization — non-fatal.
   await admin
     .from('profiles')
     .update({ active_organization_id: org.id })
     .eq('id', user.id)
 
+  revalidatePath('/', 'layout')
   return { data: org, error: null }
 }
