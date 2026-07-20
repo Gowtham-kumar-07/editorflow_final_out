@@ -1,167 +1,190 @@
 package com.editorflow.app;
 
-import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
-import android.util.Log;
 import android.view.View;
 import android.webkit.JavascriptInterface;
-import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
+import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
-/**
- * Standalone Android WebView shell for EditorFlow.
- *
- * Architecture: AppCompatActivity + WebView loading the remote Vercel URL.
- * No Capacitor — direct control over URL routing, new-window handling,
- * file upload/download, back-button behaviour, and splash timing.
- *
- * Native bridge (window.EditorFlowNative) exposes the minimal surface the
- * web app needs: hideSplash() and setStatusBarStyle().
- */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements WebViewManager.Callbacks {
 
-    // Primary host — the canonical URL the app always loads directly.
-    private static final String APP_HOST        = "editorflow.vercel.app";
-    private static final String APP_URL         = "https://editorflow.vercel.app";
-    // Legacy host kept as internal so any cached redirect or deep link never opens Chrome.
-    private static final String LEGACY_HOST     = "editorflow-final-out.vercel.app";
-    private static final String TAG             = "EF_NAV";
-    // Safety valve: dismiss the splash after 15 s even if MobileInit never fires
-    private static final int    SPLASH_TIMEOUT  = 15_000;
+    private static final String APP_URL       = "https://editorflow.vercel.app";
+    private static final int    SPLASH_TIMEOUT = 15_000;
+    private static final long   BACK_EXIT_MS   = 2_000;
 
-    private WebView webView;
-    // volatile: written from the JS-interface thread, read from the main thread
-    private volatile boolean splashReady = false;
+    private WebViewManager   wvm;
+    private PermissionManager perms;
+    private FileChooserHandler fileChooser;
+    private DownloadHandler    downloader;
+    private NetworkMonitor     network;
 
-    // Modern ActivityResult API for <input type="file">
-    private ValueCallback<Uri[]> fileChooserCallback;
-    private final ActivityResultLauncher<Intent> filePickerLauncher =
-        registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (fileChooserCallback == null) return;
-                Uri[] uris = null;
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    uris = WebChromeClient.FileChooserParams.parseResult(
-                        result.getResultCode(), result.getData());
-                }
-                fileChooserCallback.onReceiveValue(uris);
-                fileChooserCallback = null;
-            }
-        );
+    private View loadingView;
+    private View offlineView;
 
-    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+    private volatile boolean splashReady  = false;
+    private boolean          showingError = false;
+    private long             lastBackMs   = 0;
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Must precede super.onCreate() so AndroidX SplashScreen can install itself
-        SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
+        SplashScreen splash = SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
 
-        // Keep splash until MobileInit calls bridge.hideSplash(); fall back after timeout
-        splashScreen.setKeepOnScreenCondition(() -> !splashReady);
-        new Handler(Looper.getMainLooper()).postDelayed(
-            () -> splashReady = true, SPLASH_TIMEOUT);
+        splash.setKeepOnScreenCondition(() -> !splashReady);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> splashReady = true, SPLASH_TIMEOUT);
 
         setupEdgeToEdge();
+        setContentView(R.layout.activity_main);
 
-        webView = new WebView(this);
-        setContentView(webView, new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT));
+        loadingView = findViewById(R.id.loading_view);
+        offlineView = findViewById(R.id.offline_view);
+        findViewById(R.id.retry_button).setOnClickListener(v -> retryConnection());
 
-        configureWebView();
+        // Helper initialisation order: perms first, then handlers that depend on perms
+        perms       = new PermissionManager(this);
+        fileChooser = new FileChooserHandler(this, perms);
+        downloader  = new DownloadHandler(this, perms);
+        network     = new NetworkMonitor(this, new NetworkMonitor.Listener() {
+            @Override public void onAvailable() { runOnUiThread(MainActivity.this::onNetworkBack); }
+            @Override public void onLost()      { /* handled via page-error callback */ }
+        });
 
-        // JS bridge: splash + status bar control from the web layer
-        webView.addJavascriptInterface(new NativeBridge(), "EditorFlowNative");
-        webView.setWebViewClient(new AppWebViewClient());
-        webView.setWebChromeClient(new AppWebChromeClient());
-        webView.setDownloadListener(this::handleDownload);
+        wvm = new WebViewManager(this, this);
+        wvm.addJavascriptInterface(new NativeBridge(), "EditorFlowNative");
+        wvm.setDownloadListener((url, ua, cd, mime, len) ->
+            downloader.onDownloadRequested(url, ua, cd, mime, len));
+
+        android.widget.FrameLayout container = findViewById(R.id.webview_container);
+        container.addView(wvm.getView(),
+            new android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT));
 
         setupBackButton();
 
-        webView.loadUrl(APP_URL);
+        if (savedInstanceState != null) {
+            wvm.restoreState(savedInstanceState);
+        } else if (network.isOnline()) {
+            wvm.load(APP_URL);
+        } else {
+            showError();
+        }
     }
 
-    @Override protected void onResume()  { super.onResume();  webView.onResume();  }
-    @Override protected void onPause()   { super.onPause();   webView.onPause();   }
-    @Override protected void onDestroy() { webView.destroy(); super.onDestroy();   }
-
-    // ── WebView configuration ─────────────────────────────────────────────────
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private void configureWebView() {
-        WebSettings s = webView.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setMediaPlaybackRequiresUserGesture(false);
-        // Required for onCreateWindow to fire on target="_blank" / window.open()
-        s.setJavaScriptCanOpenWindowsAutomatically(true);
-        s.setSupportMultipleWindows(true);
-        // Never serve mixed content
-        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        // App loads from remote; disable local file access
-        s.setAllowFileAccess(false);
-        // content:// URIs must be readable for the system file picker to work
-        s.setAllowContentAccess(true);
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        wvm.saveState(out);
     }
 
-    // ── Edge-to-edge ──────────────────────────────────────────────────────────
+    @Override protected void onStart()   { super.onStart();   network.register();  }
+    @Override protected void onResume()  { super.onResume();  wvm.onResume();      }
+    @Override protected void onPause()   { super.onPause();   wvm.onPause();       }
+    @Override protected void onStop()    { super.onStop();    network.unregister();}
+    @Override protected void onDestroy() { wvm.destroy();     super.onDestroy();   }
 
-    private void setupEdgeToEdge() {
-        // Lay out behind the status and navigation bars (edge-to-edge)
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+    // ── WebViewManager.Callbacks ──────────────────────────────────────────────
+
+    @Override
+    public void onPageStarted() {
+        runOnUiThread(() -> {
+            showingError = false;
+            offlineView.setVisibility(View.GONE);
+            loadingView.setAlpha(1f);
+            loadingView.setVisibility(View.VISIBLE);
+        });
     }
 
-    // ── Back-button handling ──────────────────────────────────────────────────
+    @Override
+    public void onPageFinished() {
+        runOnUiThread(() -> {
+            splashReady = true;
+            loadingView.animate()
+                .alpha(0f)
+                .setDuration(250)
+                .withEndAction(() -> loadingView.setVisibility(View.GONE))
+                .start();
+        });
+    }
+
+    @Override
+    public void onPageError(boolean isNetworkError) {
+        runOnUiThread(this::showError);
+    }
+
+    @Override
+    public boolean onFileChooserRequest(ValueCallback<Uri[]> cb,
+                                        WebChromeClient.FileChooserParams p) {
+        return fileChooser.handle(cb, p);
+    }
+
+    @Override
+    public void openExternal(Uri url) {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, url)); }
+        catch (ActivityNotFoundException ignored) { }
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private void showError() {
+        loadingView.clearAnimation();
+        loadingView.setVisibility(View.GONE);
+        offlineView.setVisibility(View.VISIBLE);
+        showingError = true;
+        splashReady  = true;
+    }
+
+    private void onNetworkBack() {
+        if (showingError) retryConnection();
+    }
+
+    private void retryConnection() {
+        if (!network.isOnline()) return; // still offline; button will try again on next press
+        offlineView.setVisibility(View.GONE);
+        loadingView.setAlpha(1f);
+        loadingView.setVisibility(View.VISIBLE);
+        showingError = false;
+        wvm.reload();
+    }
 
     private void setupBackButton() {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                // Fire a cancelable DOM event so the web layer can intercept
-                // (close command palette, dismiss Radix dialogs, etc.).
-                // If any listener calls preventDefault() we treat it as consumed.
-                webView.evaluateJavascript(
-                    "(function(){"
-                    + "var e=new CustomEvent('editorflow:backpress',"
-                    + "{bubbles:true,cancelable:true});"
-                    + "return !document.dispatchEvent(e);"
-                    + "})()",
-                    consumed -> {
-                        if ("true".equals(consumed)) return; // web handled it
-                        runOnUiThread(() -> {
-                            if (webView.canGoBack()) webView.goBack();
-                            else finish();
-                        });
-                    });
+                if (wvm.canGoBack()) {
+                    wvm.goBack();
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                if (now - lastBackMs < BACK_EXIT_MS) {
+                    finish();
+                } else {
+                    lastBackMs = now;
+                    Toast.makeText(MainActivity.this,
+                        R.string.back_press_to_exit, Toast.LENGTH_SHORT).show();
+                }
             }
         });
+    }
+
+    private void setupEdgeToEdge() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
     }
 
     // ── JavaScript bridge ─────────────────────────────────────────────────────
@@ -172,16 +195,13 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public boolean isNative() { return true; }
 
-        /** Called by MobileInit once React has hydrated — removes the splash. */
+        /** Called by MobileInit once React has hydrated — releases the splash screen. */
         @JavascriptInterface
-        public void hideSplash() {
-            splashReady = true; // volatile write visible to main-thread next frame
-        }
+        public void hideSplash() { splashReady = true; }
 
         /**
-         * Sync status-bar icon colour with the active app theme.
-         * isDark = true  → white icons (dark-mode background)
-         * isDark = false → dark icons (light-mode background)
+         * isDark=true  → white status-bar icons (dark content behind them)
+         * isDark=false → dark status-bar icons (light content behind them)
          */
         @JavascriptInterface
         public void setStatusBarStyle(final boolean isDark) {
@@ -191,135 +211,5 @@ public class MainActivity extends AppCompatActivity {
                 wic.setAppearanceLightStatusBars(!isDark);
             });
         }
-    }
-
-    // ── URL routing ───────────────────────────────────────────────────────────
-
-    /** Returns true for both the canonical host and the legacy redirect source. */
-    private boolean isAppHost(String host) {
-        return APP_HOST.equalsIgnoreCase(host) || LEGACY_HOST.equalsIgnoreCase(host);
-    }
-
-    private class AppWebViewClient extends WebViewClient {
-
-        @Override
-        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
-            Log.d(TAG, "PAGE_STARTED  url=" + url);
-            super.onPageStarted(view, url, favicon);
-        }
-
-        @Override
-        public void onPageFinished(WebView view, String url) {
-            Log.d(TAG, "PAGE_FINISHED url=" + url);
-            super.onPageFinished(view, url);
-        }
-
-        @Override
-        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            Uri    url    = request.getUrl();
-            String host   = url.getHost();
-            String scheme = url.getScheme();
-
-            // Both the canonical host and the legacy redirect origin stay in the WebView
-            if (isAppHost(host) && "https".equalsIgnoreCase(scheme)) {
-                Log.d(TAG, "INTERNAL      url=" + url);
-                return false;
-            }
-
-            // Deep-link schemes: hand off to the appropriate system app
-            if ("mailto".equals(scheme) || "tel".equals(scheme) || "sms".equals(scheme)) {
-                Log.d(TAG, "EXTERNAL_DEEP url=" + url);
-                openExternal(url);
-                return true;
-            }
-
-            // External http(s): open in the system browser
-            if ("http".equals(scheme) || "https".equals(scheme)) {
-                Log.d(TAG, "EXTERNAL_WEB  url=" + url);
-                openExternal(url);
-                return true;
-            }
-
-            Log.d(TAG, "BLOCKED       url=" + url);
-            return true; // block intent:// and any other unusual schemes
-        }
-    }
-
-    // ── New-window handling & file upload ─────────────────────────────────────
-
-    private class AppWebChromeClient extends WebChromeClient {
-
-        /**
-         * Intercepts target="_blank" links and window.open() calls.
-         * Same-origin targets load in the main WebView; external targets open in browser.
-         */
-        @Override
-        public boolean onCreateWindow(WebView view, boolean isDialog,
-                                      boolean isUserGesture, Message resultMsg) {
-            // Attach a temporary WebView to receive the navigation URL, then route it
-            WebView router = new WebView(view.getContext());
-            router.setWebViewClient(new WebViewClient() {
-                @Override
-                public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
-                    Uri    target = req.getUrl();
-                    String host   = target.getHost();
-                    String scheme = target.getScheme();
-                    if (isAppHost(host) && "https".equalsIgnoreCase(scheme)) {
-                        Log.d(TAG, "WINDOW_INTERNAL url=" + target);
-                        view.loadUrl(target.toString()); // keep in main WebView
-                    } else {
-                        Log.d(TAG, "WINDOW_EXTERNAL url=" + target);
-                        openExternal(target);            // open in system browser
-                    }
-                    return true;
-                }
-            });
-            ((WebView.WebViewTransport) resultMsg.obj).setWebView(router);
-            resultMsg.sendToTarget();
-            return true;
-        }
-
-        /** Handles <input type="file"> — document and photo uploads. */
-        @Override
-        public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
-                                         FileChooserParams params) {
-            if (fileChooserCallback != null) {
-                fileChooserCallback.onReceiveValue(null); // cancel any pending request
-            }
-            fileChooserCallback = callback;
-            try {
-                filePickerLauncher.launch(params.createIntent());
-            } catch (ActivityNotFoundException e) {
-                fileChooserCallback = null;
-                return false;
-            }
-            return true;
-        }
-    }
-
-    // ── File download ─────────────────────────────────────────────────────────
-
-    private void handleDownload(String url, String userAgent,
-                                String contentDisposition, String mimeType,
-                                long contentLength) {
-        try {
-            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
-            req.addRequestHeader("User-Agent", userAgent);
-            req.setNotificationVisibility(
-                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            req.setDestinationInExternalPublicDir(
-                android.os.Environment.DIRECTORY_DOWNLOADS,
-                URLUtil.guessFileName(url, contentDisposition, mimeType));
-            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            if (dm != null) dm.enqueue(req);
-        } catch (Exception ignored) { }
-    }
-
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    private void openExternal(Uri url) {
-        try {
-            startActivity(new Intent(Intent.ACTION_VIEW, url));
-        } catch (ActivityNotFoundException ignored) { }
     }
 }

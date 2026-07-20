@@ -4,4 +4,16 @@
     <string name="title_activity_main">EditorFlow</string>
     <string name="package_name">com.editorflow.app</string>
     <string name="custom_url_scheme">com.editorflow.app</string>
+
+    <!-- Offline screen -->
+    <string name="offline_title">No Internet Connection</string>
+    <string name="offline_subtitle">Please check your internet connection and try again.</string>
+    <string name="offline_retry">Retry</string>
+    <string name="back_press_to_exit">Press back again to exit</string>
+
+    <!-- Download notifications -->
+    <string name="download_started">Downloading %1$s…</string>
+    <string name="download_failed">Download failed</string>
+    <string name="download_description">Downloading via EditorFlow</string>
+    <string name="storage_permission_required">Storage permission required to download files</string>
 </resources>

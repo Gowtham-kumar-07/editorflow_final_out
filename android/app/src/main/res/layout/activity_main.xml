@@ -1,5 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MainActivity creates its WebView programmatically; this layout is not used at runtime. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" />
+    android:layout_height="match_parent"
+    android:background="@color/windowBackground">
+
+    <!-- WebView is added programmatically into this container -->
+    <FrameLayout
+        android:id="@+id/webview_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!--
+        Loading overlay: displayed while the initial page loads.
+        Fades out smoothly when onPageFinished fires.
+    -->
+    <FrameLayout
+        android:id="@+id/loading_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/windowBackground"
+        android:visibility="visible">
+
+        <ProgressBar
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            android:indeterminateTint="#FFFFFF" />
+
+    </FrameLayout>
+
+    <!--
+        Offline / error overlay: shown when there is no network or a fatal page error.
+        Hides when connectivity is restored and Retry succeeds.
+    -->
+    <LinearLayout
+        android:id="@+id/offline_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="40dp"
+        android:background="@color/windowBackground"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="@string/app_name"
+            android:alpha="0.6" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="@string/offline_title"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/offline_subtitle"
+            android:textColor="#A1A1AA"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4" />
+
+        <Button
+            android:id="@+id/retry_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="@string/offline_retry"
+            android:paddingHorizontal="36dp"
+            android:paddingVertical="12dp"
+            android:backgroundTint="#3B82F6"
+            android:textColor="#FFFFFF"
+            android:stateListAnimator="@null" />
+
+    </LinearLayout>
+
+</FrameLayout>

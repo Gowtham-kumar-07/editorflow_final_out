@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
-    <cache-path name="my_cache_images" path="." />
+<paths>
+    <!--
+        External cache directory: used for temporary camera capture images.
+        Scoped to the app, auto-cleared on storage pressure, not backed up.
+    -->
+    <external-cache-path name="camera_photos" path="." />
+
+    <!-- Internal cache fallback (used when external storage is unavailable) -->
+    <cache-path name="app_cache" path="." />
 </paths>
